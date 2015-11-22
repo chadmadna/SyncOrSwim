@@ -8,7 +8,6 @@ The only program that synchronizes your directories swimmingly!
 
 client.py
 -------------
-StackEdit stores your documents in your browser, which means all your documents are automatically saved locally and are accessible **offline!**
 
 > **MainThread**
 > describes the client mechanism in creating requests and processing server responses.
@@ -57,7 +56,6 @@ Iterates over the job queue and applies the changes to the client directory.
 
 client_GUI.py
 -------------
-This Python program runs Sync or Swim's GUI for users' ease of access and readability.
 
 > **LoginWindow**
 > is the main window that users interact with in order to use the program. It first asks for the path of the directory that users would like to sync from, the IP address of the destination machine, and the port number.
@@ -97,7 +95,6 @@ Assigns an ID to a thread within a critical section.
 
 server.py
 -------------
-StackEdit stores your documents in your browser, which means all your documents are automatically saved locally and are accessible **offline!**
 
 > **ClientThread**
 > The ClientThread class describes the server mechanism in handling requests from the client.
@@ -136,7 +133,7 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> describes.
+> describes stuff.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
