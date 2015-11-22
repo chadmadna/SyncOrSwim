@@ -331,17 +331,26 @@ class cmdApp(cmd.Cmd):
         
         while True:
             dirpath = str(input('Enter path to shared folder: '))
-            if not os.path.exists(dirpath) or not dirpath:
+            if not os.path.exists(dirpath):
                 print("The path you entered does not exist.")
                 continue
             LOCAL_DIR = dirpath
-            
+            break
+        
+        while True:
             ipaddr = str(input('IP address: '))
-            if not ip_address(ipaddr) or not ipaddr:
+            try:
+                ip_address(ipaddr)
+            except ValueError:
+                print("The IP address you entered is invalid.")
+                continue
+            if not ip_address(ipaddr):
                 print("The IP address you entered is invalid.")
                 continue
             TCP_IP = ipaddr
-
+            break
+        
+        while True:
             portnum = input('Port number: ')
             try:
                 portnum = int(portnum)
@@ -352,7 +361,6 @@ class cmdApp(cmd.Cmd):
                 print("Please enter a port number.")
                 continue
             TCP_PORT = portnum
-
             break
 
         connect(LOCAL_DIR, TCP_IP, TCP_PORT)
@@ -361,7 +369,7 @@ class cmdApp(cmd.Cmd):
             print("Type 'syncfrom' to pull changes from server to client")
             print("Type 'serverfiles' to view server files")
             print("Type 'printthreads' to view spawned threads")
-            print("Type 'close' to exit\n")
+            print("Type 'exit' close connection and exit\n")
 
     def do_syncto(self, line):
         syncto()
@@ -375,21 +383,20 @@ class cmdApp(cmd.Cmd):
     def do_printthreads(self, line):
         printthreads()
 
-    def do_close(self, line):
+    def do_exit(self, line):
         close()
         
     
-def print(*args, **kwargs):
-    """Overrides the print function so that it uses a lock
-    to print output in order."""
-    with P_LOCK:
-        __builtins__.print(*args, **kwargs)
+##def print(*args, **kwargs):
+##    """Overrides the print function so that it uses a lock
+##    to print output in order."""
+##    with P_LOCK:
+##        __builtins__.print(*args, **kwargs)
         
-def printThreads():
-    with P_LOCK:
-        print('\nCurrent threads list:')
-        THREADS['Main'].displayThreads()
-        print('')
+def printthreads():
+    print('\nCurrent threads list:')
+    THREADS['Main'].displayThreads()
+    print('')
                          
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
     
@@ -427,19 +434,17 @@ def syncfrom():
 
 def serverfiles():
     index = mainthread.getIndex()[1]
-    print('\nNAME                          | TYPE | LAST MODIFIED')
+    print('\nNAME'+46*' '+'| TYPE | LAST MODIFIED')
     for k in index.keys():
         name, ntype, mtime = k, index[k][0], time.ctime(index[k][1])
-        if len(name) > 30:
-            name = '...' + name[len(name)-26:]
-        print('{:30}| {:4} | {}'.format(name, ntype, mtime))
+        if len(name) > 50:
+            name = '...' + name[len(name)-46:]
+        print('{:50}| {:4} | {}'.format(name, ntype, mtime))
 
 def close():
     sys.exit()
 
 if __name__ == '__main__':
-
-    global LOCAL_DIR, TCP_IP, TCP_PORT
 
     # Running in IDLE
     if 'idlelib.run' in sys.modules:
@@ -450,7 +455,9 @@ if __name__ == '__main__':
                 print("The path you entered does not exist.")
                 continue
             LOCAL_DIR = dirpath
-            
+            break
+        
+        while True:
             ipaddr = str(input('IP address: '))
             try:
                 ip_address(ipaddr)
@@ -461,7 +468,9 @@ if __name__ == '__main__':
                 print("The IP address you entered is invalid.")
                 continue
             TCP_IP = ipaddr
-
+            break
+        
+        while True:
             portnum = input('Port number: ')
             try:
                 portnum = int(portnum)
@@ -472,7 +481,6 @@ if __name__ == '__main__':
                 print("Please enter a port number.")
                 continue
             TCP_PORT = portnum
-
             break
         
         connect(LOCAL_DIR, TCP_IP, TCP_PORT)

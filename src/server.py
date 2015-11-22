@@ -440,6 +440,7 @@ if __name__ == '__main__':
     tcpsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     tcpsock.bind(('', TCP_PORT))
     tcpsock.setblocking(0.0)
+    print('\n~ SyncOrSwim 1.0 server\n~ Establish a server and listen for connections.\n')
 
     # Prompts the user to input the server's shared folder directory path
     while True:

@@ -3,7 +3,7 @@ import os, sys
 from tkinter import *
 from tkinter.ttk import *
 from ipaddress import ip_address
-from client import *
+import client
 
 class LoginWindow(object):
     
@@ -32,9 +32,9 @@ class LoginWindow(object):
         statusLabel = Label(self.login, textvariable=self.statusVar, foreground='red')
         statusLabel.grid(row=3, sticky='n', columnspan=2)
 
-        dirEntry.set(LOCAL_DIR)
-        ipEntry.set(TCP_IP)
-        portEntry.set(TCP_PORT)
+        dirEntry.set(client.LOCAL_DIR)
+        ipEntry.set(client.TCP_IP)
+        portEntry.set(client.TCP_PORT)
         
         self.e1 = Entry(self.login, textvariable=dirEntry)
         self.e1.grid(row=0, column=1)
@@ -70,15 +70,12 @@ class LoginWindow(object):
         except ValueError:
             raise Exception("Port number must be an integer.")
         else:
+            client.connect(self.e1.get(), self.e2.get(), self.e3.get())
             try:
-                connect(self.e1.get(), self.e2.get(), self.e3.get())
-            except:
-                pass
-            try:
-                global mainthread
-                if mainthread:
+                if client.mainthread:
                     self.window.destroy()
-                    self.app = AppWindow(mainthread)
+                    self.app = AppWindow(client.mainthread)
+                    client.LOCAL_DIR, client.TCP_IP, client.TCP_PORT = self.e1.get(), self.e2.get(), self.e3.get()
             except NameError:
                 pass
         if not self.app:
@@ -184,11 +181,11 @@ class AppWindow:
             command=lambda col=col: self.sortby(tree, col, int(not descending)))
         
     def syncfrom(self):
-        syncfrom()
+        client.syncfrom()
         self.updatelocaltree()
         
     def syncto(self):
-        syncto()
+        client.syncto()
         self.updateservertree()
         
     def updatelocaltree(self):
