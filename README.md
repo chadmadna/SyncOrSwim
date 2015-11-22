@@ -1,19 +1,30 @@
-﻿Sync or Swim
+Sync or Swim
 ===================
 
 The only program that synchronizes your directories swimmingly!
 
 ----------
 
-Written by:
-Irsyad Nabil 1406546134
-Meta Andrini Utari 1406546153
+INSTRUCTIONS
+----------
 
-Team 4 Participation:
-Meta - 50%
-Irsyad - 50%
-Isaac - 0%
-Amel - 0%
+> Make sure that your device and the device you are going to sync to are connected to the Internet.
+
+**[CLIENT]**
+
+1. Run the client side of Sync or Swim program.
+2. Choose the folder the contents you would like to synchronize to another folder, and paste the directory path to the Directory box (e.g.: /Users/lepton/Desktop/test).
+3. Paste the IP address of the destination device to the IP Address box.
+4. Enter a port number you would like to connect to in the Port Number box.
+5. Submit.
+
+**[SERVER]**
+
+1. Run the server side of Sync or Swim program.
+2. Specify the destination folder the client would synchronize to (e.g.: /Users/lepton/Desktop/test2).
+3. Wait until the client initiates connection.
+
+----------
 
 client.py
 -------------
@@ -142,16 +153,34 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> Performs file operations and writes received data from the job queue to the local directory.
+> Performs file operations on the local shared folder.
 
 #### <i class="icon-check-empty"></i> run
-You can rename the current document by clicking the document title in the navigation bar.
+Iterates over the jobqueue and performs file operations according to each job queue entry.
 
 > **ListenThread**
-> describes the server mechanism in listening to any incoming connections from the client.
+> Listens for any incoming connections from the client.
 
 #### <i class="icon-check"></i> run
 Listens for connections; and when there exist incoming connections from the client, it can handle up to 10 connections. In handling these connections, the function has to wait for an available socket before creating a new thread for them.
 
 #### <i class="icon-check"></i> displayThreads
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
+
+----------
+
+
+Instructions
+-------------
+Make sure that both your device and the server host are connected to the Internet, and that there are no firewall blocking connections.
+
+#### <i class="icon-check-empty"></i> Client-side
+
+1. Run the client-side of SyncOrSwim either via command line or via IDLE.
+2. When prompted, enter the path of the local shared folder, the IP address of the server, and the port.
+3. Follow the on-screen instructions. You will be now using the built-in SyncOrSwim shell.
+
+#### <i class="icon-check-empty"></i> Server-side
+
+1. Run the server-side of SyncOrSwim via IDLE or command line.
+2. When prompted, enter the path of the server shared folder.
