@@ -11,16 +11,19 @@ client.py
 StackEdit stores your documents in your browser, which means all your documents are automatically saved locally and are accessible **offline!**
 
 > **MainThread**
-> describes the client mechanism in creating requests.
+> describes the client mechanism in creating requests and processing server responses.
 
-#### <i class="icon-check-empty"></i> run
-Assigns an ID to a thread within a critical section.
+#### <i class="icon-check"></i> run
+Updates the client index, and notifies that the main thread is running and ready to receive requests/responses.
 
-#### <i class="icon-check-empty"></i> displayThreads
-Prints out a list of threads.
+#### <i class="icon-check"></i> send
+Sends all packages in the queue to be processed by the server, where the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
-#### <i class="icon-check-empty"></i> getIndex
-You can rename the current document by clicking the document title in the navigation bar.
+#### <i class="icon-check-empty"></i> receive
+Creates a directory tree that starts from the root directory in the form of a (nested) dictionary. If a child directory is encountered during the traversal of the path, then the function recursively traverses down said child directory. Else, if a file is encountered during the traversal of the path, it is stored in the dictionary as it is under the appropriate directory.
+
+#### <i class="icon-check"></i> updateIndex
+Updates file indices within the client directory in the form of a dictionary, excluding hidden directories and files.
 
 #### <i class="icon-check-empty"></i> syncFromServer
 You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
@@ -28,38 +31,26 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 #### <i class="icon-check-empty"></i> syncToServer
 Traverses a predetermined path based on input and returns whether it is a directory or a file.
 
-#### <i class="icon-check"></i> _update_index
-Updates file indices within a directory based on input in the form of an index dictionary, excluding hidden directories and files.
-
-#### <i class="icon-check"></i> get_nametype
+#### <i class="icon-check"></i> getNametype
 Returns whether a predetermined path based on input is a directory or a file.
-
-#### <i class="icon-check"></i> send
-Sends all packages in the queue to be processed by the server, where the string '?magic?' is a makeshift codeword indicating that the transmission is terminated.
-
-#### <i class="icon-check-empty"></i> receive
-Creates a directory tree that starts from the root directory in the form of a (nested) dictionary. If a child directory is encountered during the traversal of the path, then the function recursively traverses down said child directory. Else, if a file is encountered during the traversal of the path, it is stored in the dictionary as it is under the appropriate directory.
 
 #### <i class="icon-check"></i> wait
 Receives connection from server on a non-conditional loop without processing any possible transmissions until the server sends an ‘OK’ signal.
 
-#### <i class="icon-check-empty"></i> sendIndex
-Creates an index of the server directory in the form of a dictionary.
+#### <i class="icon-check"></i> getIndex
+Updates client index, sends a request for server index, and then returns both client and server indices.
 
-#### <i class="icon-check"></i> recvIndex
-Sends a request to get index and then returns the response of that request.
+#### <i class="icon-check"></i> sendIndex
+Sends client index as a dump package to the server.
 
-#### <i class="icon-check"></i> getDirTree
-Returns a directory tree that starts from the root directory in the form of a (nested) dictionary. If a child directory is encountered during the traversal of the path, then the function recursively traverses down said child directory. Else, if a file is encountered during the traversal of the path, it is stored in the dictionary as it is under the appropriate directory.
-
-#### <i class="icon-check"></i> recvDirTree
-Sends a request to get directory tree and then returns the response of that request.
+#### <i class="icon-check"></i> displayThreads
+Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
 
 > **WorkerThread**
-> describes sh*t.
+> describes the mechanism of writing the changes made after synchronization unto the local disk.
 
-#### <i class="icon-check-empty"></i> run
-You can rename the current document by clicking the document title in the navigation bar.
+#### <i class="icon-check"></i> run
+Iterates over the job queue and applies the changes to the client directory.
 
 ----------
 
@@ -127,7 +118,7 @@ Returns whether a predetermined path based on input is a directory or a file.
 Retrieves the date and time from the system and sends it as a package to the client.
 
 #### <i class="icon-check"></i> sendIndex
-Updates the server index and sends the updated index as a package to the client.
+Updates the server index and sends the updated index as a dump package to the client.
 
 #### <i class="icon-check"></i> wait
 Receives connection from client on a non-conditional loop without processing any possible transmissions until the client sends an ‘OK’ signal.
@@ -145,7 +136,7 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> describes sh*t.
+> describes.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
