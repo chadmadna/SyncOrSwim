@@ -74,11 +74,11 @@ class MainThread(Thread):
             for d in dirs:
                 if not d.startswith('.'):
                     relpath = os.path.relpath(os.path.join(root, d), self.clientdir)
-                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
+                    self.clientindex[relpath] = (self.getNametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
             for f in files:
                 if not f.startswith('.'):
                     relpath = os.path.relpath(os.path.join(root, f), self.clientdir)
-                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
+                    self.clientindex[relpath] = (self.getNametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
 
     def syncFromServer(self):
         """Sync local files from server machine by examining client's file index and then
@@ -280,7 +280,8 @@ class WorkerThread(Thread):
     def run(self):
         """Iterates over the jobqueue and writes changes to
         local directory."""
-
+        
+        os.chdir(LOCAL_DIR)
         print('Writing to local directory..')
         W_SEM.acquire()
         if not self.jobqueue:
@@ -331,7 +332,9 @@ def printThreads():
         print('')
                          
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
-    global tcpsock, mainthread
+    global tcpsock, mainthread, LOCAL_DIR
+
+    LOCAL_DIR = localdir
     tcpsock = socket(AF_INET, SOCK_STREAM)
     tcpsock.settimeout(15)
 
@@ -361,3 +364,9 @@ def syncto():
 
 def syncfrom():
     mainthread.syncFromServer()
+
+def getlocaldir():
+    return mainthread.getDirTree(LOCAL_DIR)
+
+def getserverdir():
+    return mainthread.recvDirTree()

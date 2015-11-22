@@ -335,6 +335,7 @@ class WorkerThread(Thread):
         """Iterates over the jobqueue and writes changes to
         local directory."""
 
+        os.chdir(LOCAL_DIR)
         print('Writing to local directory..')
         W_SEM.acquire()
         if not self.jobqueue:
