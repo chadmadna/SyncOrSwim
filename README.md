@@ -12,6 +12,7 @@ Meta - 50%
 Irsyad - 50%
 Isaac - 0%
 Amel - 0%
+
 ----------
 
 INSTRUCTIONS
