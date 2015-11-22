@@ -1,10 +1,19 @@
-Sync or Swim
+﻿Sync or Swim
 ===================
 
 The only program that synchronizes your directories swimmingly!
 
 ----------
 
+Written by:
+Irsyad Nabil 1406546134
+Meta Andrini Utari 1406546153
+
+Team 4 Participation:
+Meta - 50%
+Irsyad - 50%
+Isaac - 0%
+Amel - 0%
 
 client.py
 -------------
@@ -133,7 +142,7 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> describes stuff.
+> Performs file operations and writes received data from the job queue to the local directory.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
