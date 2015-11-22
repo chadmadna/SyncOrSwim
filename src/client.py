@@ -10,21 +10,22 @@ from socket import *
 LOCAL_DIR = r''
 TCP_IP = '127.0.0.1'
 TCP_PORT = 9001
-BUFFER_SIZE = 4096
+BUF_SIZE = 4096
 
-TCP_LOCK = Lock()
-PRINT_LOCK = RLock()
+S_LOCK = Lock() # Socket mutex
+P_LOCK = RLock() # Print mutex
 
-LOCK_1 = Semaphore(1)
-LOCK_2 = Semaphore(0)
+S_SEM = Semaphore(1)
+W_SEM = Semaphore(0)
 
 CLIENT_INDEX = dict()
-JOBQUEUE = []
 THREADS = dict()
+JOBQUEUE = []
 
-STATUS = 'Ready.'
 
 class MainThread(Thread):
+    """The main thread performs sync operations to and from the
+    server machine."""
     
     def __init__(self, ip, port, tcpsock, threads, clientdir, clientindex, jobqueue):
         Thread.__init__(self)
@@ -41,34 +42,24 @@ class MainThread(Thread):
         self.serverindex = self.recvIndex()
         
     def run(self):
-        self._update_index(self.clientdir, self.clientindex)
+        self.updateIndex()
         print("Main thread started for " + self.ip + ":" + str(self.port))
 
-    def displayThreads(self):
-        print('{!s:15}  {!s:20} {}'.format('THREAD NAME','INFO','IS ALIVE'))
-        for key in sorted(list(self.threadlist.keys())):
-            print('{!s:15}: {!s:20} {}'.format(key, 
-                self.threadlist[key], self.threadlist[key].isAlive()))
-
-    def getIndex(self):
-        self._update_index(LOCAL_DIR, self.clientindex)
-        self.send('GETINDEX')
-        self.serverindex = json.loads(self.receive())
-        return (self.clientindex, self.serverindex)
-
     def syncFromServer(self):
-        LOCK_1.acquire()
-        print('LOCK_1 acquired')
-        # Sync server to client
+        """Sync local files to client machine by examining client's file index and then
+        send sync and file operation protocols."""
+
+        # Acquire the sync thread semaphore
+        S_SEM.acquire()
         try:
+            # Send request, wait for signal then send client's directory
             print('Started sync from server...')
-            # Send sync signal
             self.send('SYNCFROM')
-            # Send client directory
             self.wait('OK')
             self.send(LOCAL_DIR)
+
             # Update index before proceeding
-            self._update_index(self.clientdir, self.clientindex)
+            self.updateIndex()
 
             # Encode, wait for signal and send index to server
             outpkg = json.dumps(self.clientindex)
@@ -99,20 +90,20 @@ class MainThread(Thread):
             workerthread = WorkerThread(self.jobqueue)
             workerthread.start()
             THREADS['WorkerThread'] = workerthread
-            LOCK_2.release()
+            W_SEM.release()
         except:
-            LOCK_1.release()
+            S_SEM.release()
 
     def syncToServer(self):        
-        LOCK_1.acquire()
-        print('LOCK_1 acquired')
+        S_SEM.acquire()
+        print('S_SEM acquired')
         # Sync client to server
         try:
             print('Started sync to server...')
             # Send sync signal
             self.send('SYNCTO,{}'.format(LOCAL_DIR))
             # Update index before proceeding
-            self._update_index(self.clientdir, self.clientindex)
+            self.updateIndex()
             self.send('OK')
             serverdir = self.receive()
             print(serverdir)
@@ -205,23 +196,23 @@ class MainThread(Thread):
             # End of a sync protocol
             print('Done syncing to server!')
             print(joblist)
-            LOCK_1.release()
-            print('LOCK_1 released')
+            S_SEM.release()
+            print('S_SEM released')
         except:
-            LOCK_1.release()
+            S_SEM.release()
         
-    def _update_index(self, directory, index):
-        for root, dirs, files in os.walk(directory):
+    def updateIndex(self):
+        for root, dirs, files in os.walk(self.clientdir):
             for d in dirs:
                 if not d.startswith('.'):
-                    relpath = os.path.relpath(os.path.join(root, d), directory)
-                    index[relpath] = (self.get_nametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
+                    relpath = os.path.relpath(os.path.join(root, d), self.clientdir)
+                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
             for f in files:
                 if not f.startswith('.'):
-                    relpath = os.path.relpath(os.path.join(root, f), directory)
-                    index[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
+                    relpath = os.path.relpath(os.path.join(root, f), self.clientdir)
+                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
     
-    def get_nametype(self, path):
+    def getNametype(self, path):
         if os.path.isdir(path):
             return 'dir'
         elif os.path.isfile(path):
@@ -257,6 +248,18 @@ class MainThread(Thread):
             if s == signal:
                 break
 
+    def displayThreads(self):
+        print('{!s:15}  {!s:20} {}'.format('THREAD NAME','INFO','IS ALIVE'))
+        for key in sorted(list(self.threadlist.keys())):
+            print('{!s:15}: {!s:20} {}'.format(key, 
+                self.threadlist[key], self.threadlist[key].isAlive()))
+
+    def getIndex(self):
+        self.updateIndex()
+        self.send('GETINDEX')
+        self.serverindex = json.loads(self.receive())
+        return (self.clientindex, self.serverindex)
+
     def sendIndex(self):
         outpkg = json.dumps(self.clientindex)
         self.send(outpkg)
@@ -289,37 +292,42 @@ class WorkerThread(Thread):
         self.jobqueue = jobqueue
 
     def run(self):
-        LOCK_2.acquire()
-        while True:
-            if self.jobqueue:
-                print(len(self.jobqueue))
+        """Iterates over the jobqueue and writes changes to
+        local directory."""
+
+        print('Writing to local directory..')
+        W_SEM.acquire()
+        if not self.jobqueue:
+            print('No files in jobqueue.')
+            S_SEM.release()
+        else:
+            while self.jobqueue:
                 job_tuple = self.jobqueue.pop(0)
                 job, file = job_tuple
-                print(job[0])
-                if job[0][:4] == 'SYNC':
-                    print('SYNC')
+                jobcode = job[0]
+                if jobcode[:4] == 'SYNC':
                     continue
-                if job[0] == 'CP':
-                    with open(job[2], 'wb') as f:
+                if jobcode == 'CP':
+                    src, dest = job[1], job[2]
+                    with open(dest, 'wb') as f:
                         f.write(file)
                         f.close()
-                if job[0] == 'CPDIR':
+                if jobcode == 'CPDIR':
+                    src, dest = job[1], job[2]
                     try:
-                        os.mkdir(job[2])
+                        os.mkdir(dest)
                     except FileExistsError:
-                        print(job[2],' already exists.')
-                if job[0] == 'RM':
-                    os.remove(job[1])
-                if job[0] == 'RMDIR':
-                    shutil.rmtree(job[1])
-                if job[0] == 'DONE':
-                    print('LOCK_1 released')
-                    LOCK_1.release()
-                    print('Done syncing files!')
+                        print(dest,' already exists.')
+                elif jobcode == 'RM':
+                    dest = job[1]
+                    os.remove(dest)
+                elif jobcode == 'RMDIR':
+                    dest = job[1]
+                    shutil.rmtree(dest)
+                if jobcode == 'DONE':
+                    print('Done writing to local directory!')
+                    S_SEM.release()
                     break
-            else:
-                LOCK_1.release()
-                print('LOCK_1 released')
                             
     def __repr__(self):
         return "{} jobs in queue".format(len(self.jobqueue))
@@ -354,7 +362,6 @@ def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
             sys.exit()
         except ConnectionRefusedError:      
             print('Connection refused by server. Server may be offline.', file=sys.stderr)
-            STATUS = 'Connection refused.'
             return
 
     mainthread = MainThread(ip, port, tcpsock, THREADS, LOCAL_DIR, CLIENT_INDEX, JOBQUEUE)

@@ -19,8 +19,12 @@ Q_LOCK = Lock() # Queue mutex
 S_LOCK = Lock() # Socket mutex
 P_LOCK = RLock() # Print mutex
 
-C_SEM = Semaphore(1) # Semaphore for client threads
+S_SEM = Semaphore(1) # Semaphore for sync threads
 W_SEM = Semaphore(0) # Semaphore for worker threads
+
+SERVER_INDEX = dict()
+THREADS = dict()
+JOBQUEUE = []
 
 class ClientThread(Thread):
     """The client thread is started after a connection from a client
@@ -105,32 +109,6 @@ class ClientThread(Thread):
                             break
                 return ret if isFile else ret.decode()
 
-    def getNametype(self, path):
-        """Returns a string representing the type of a path name."""
-        if os.path.isdir(path):
-            return 'dir'
-        elif os.path.isfile(path):
-            return 'file'
-        else: return None
-        
-    def sendTime(self):
-        """Sends a timestamp to the client."""
-        timestamp = datetime.datetime.now().strftime("%A, %d. %B %Y %I:%M%p")
-        self.send(timestamp)
-
-    def sendIndex(self):
-        """Sends the server index to the client."""
-        self.updateIndex()
-        outpkg = json.dumps(self.serverindex)
-        self.send(outpkg)
-
-    def wait(self, signal):
-        """Waits for a signal from the client in the form of a string."""
-        while True:
-            s = self.receive()
-            if s == signal:
-                break
-            
     def updateIndex(self):
         """Updates the index of the files in the server directory."""
         for root, dirs, files in os.walk(self.serverdir):
@@ -148,59 +126,61 @@ class ClientThread(Thread):
         send sync and file operation protocols."""
 
         # Acquire the client thread semaphore
-        C_SEM.acquire()
+        S_SEM.acquire()
+        try:
+            # Wait for signal then sends server's directory
+            print('Started sync from client...')
+            self.wait('OK')
+            self.send(LOCAL_DIR)
 
-        # Wait for signal then sends server's directory
-        print('Started sync from client...')
-        self.wait('OK')
-        self.send(LOCAL_DIR)
+            # Update index before proceeding
+            self.updateIndex()
 
-        # Update index before proceeding
-        self.updateIndex()
+            # Encode, wait for signal then send index to client
+            outpkg = json.dumps(self.serverindex)
+            self.wait('OK')
+            self.send(outpkg)
 
-        # Encode, wait for signal then send index to client
-        outpkg = json.dumps(self.serverindex)
-        self.wait('OK')
-        self.send(outpkg)
-
-        # Receive requests and files from client
-        Q_LOCK.acquire()
-        while True:
-            request = self.receive()
-            if request:
-                job = tuple(request.split(','))
-                self.send('OK')
-
-                # Atomically add a single batch of sync jobs
-                # Wait and receive file for all copy jobs
-                # Put job and file in queue
-                if job[0] == 'CP':
-                    file = self.receive(isFile=True)
+            # Receive requests and files from client
+            Q_LOCK.acquire()
+            while True:
+                request = self.receive()
+                if request:
+                    job = tuple(request.split(','))
                     self.send('OK')
-                    self.jobqueue.append((job, file))
 
-                # Finish adding jobs to the client
-                elif job[0] == 'DONE':
-                    self.jobqueue.append((job, None))
-                    print('Done syncing from client!')
-                    Q_LOCK.release()
-                    break
+                    # Atomically add a single batch of sync jobs
+                    # Wait and receive file for all copy jobs
+                    # Put job and file in queue
+                    if job[0] == 'CP':
+                        file = self.receive(isFile=True)
+                        self.send('OK')
+                        self.jobqueue.append((job, file))
 
-                # Put job into jobqueue if not copy job
-                else:
-                    self.jobqueue.append((job, None))
+                    # Finish adding jobs to the client
+                    elif job[0] == 'DONE':
+                        self.jobqueue.append((job, None))
+                        print('Done syncing from client!')
+                        Q_LOCK.release()
+                        break
 
-        # Start worker thread that will write to the local directory
-        # Release the semaphore for the worker thread
-        workerthread = WorkerThread(self.jobqueue, self)
-        workerthread.start()
-        threads['WorkerThread[{}]'.format(self.threadID)] = workerthread
-        W_SEM.release()
+                    # Put job into jobqueue if not copy job
+                    else:
+                        self.jobqueue.append((job, None))
+
+            # Start worker thread that will write to the local directory
+            # Release the semaphore for the worker thread
+            workerthread = WorkerThread(self.jobqueue, self)
+            workerthread.start()
+            threads['WorkerThread[{}]'.format(self.threadID)] = workerthread
+            W_SEM.release()
+        except:
+            S_SEM.release()
 
     def syncToClient(self):
 
         # Acquire the client thread semaphore
-        C_SEM.acquire()
+        S_SEM.acquire()
 
         # Sync server from client
         print('Started sync to client...')
@@ -303,7 +283,33 @@ class ClientThread(Thread):
 
         # End of a sync protocol
         print('Done syncing to client!')
-        C_SEM.release()
+        S_SEM.release()
+
+    def getNametype(self, path):
+        """Returns a string representing the type of a path name."""
+        if os.path.isdir(path):
+            return 'dir'
+        elif os.path.isfile(path):
+            return 'file'
+        else: return None
+        
+    def sendTime(self):
+        """Sends a timestamp to the client."""
+        timestamp = datetime.datetime.now().strftime("%A, %d. %B %Y %I:%M%p")
+        self.send(timestamp)
+
+    def sendIndex(self):
+        """Sends the server index to the client."""
+        self.updateIndex()
+        outpkg = json.dumps(self.serverindex)
+        self.send(outpkg)
+
+    def wait(self, signal):
+        """Waits for a signal from the client in the form of a string."""
+        while True:
+            s = self.receive()
+            if s == signal:
+                break
 
     def getID(self):
         """Returns the ID for a thread."""
@@ -326,12 +332,14 @@ class WorkerThread(Thread):
         self.threadID = clientthread.threadID
 
     def run(self):
-        """Iterates over the jobqueue"""
-        print('Writing to directory..')
+        """Iterates over the jobqueue and writes changes to
+        local directory."""
+
+        print('Writing to local directory..')
         W_SEM.acquire()
         if not self.jobqueue:
             print('No files in jobqueue.')
-            C_SEM.release()
+            S_SEM.release()
         else:
             while self.jobqueue:
                 job_tuple = self.jobqueue.pop(0)
@@ -350,15 +358,15 @@ class WorkerThread(Thread):
                         os.mkdir(dest)
                     except FileExistsError:
                         print(dest,' already exists.')
-                if jobcode == 'RM':
+                elif jobcode == 'RM':
                     dest = job[1]
                     os.remove(dest)
-                if jobcode == 'RMDIR':
+                elif jobcode == 'RMDIR':
                     dest = job[1]
                     shutil.rmtree(dest)
                 if jobcode == 'DONE':
-                    print('Done writing to directory!')
-                    C_SEM.release()
+                    print('Done writing to local directory!')
+                    S_SEM.release()
                     break
 
     def __repr__(self):
@@ -425,11 +433,6 @@ def close():
 
 if __name__ == '__main__':
 
-    # Initialize thread list, server index, and the job queue
-    threads = dict()
-    serverindex = dict()
-    jobqueue = []
-
     # Initializes socket and binds address to socket
     tcpsock = socket(AF_INET, SOCK_STREAM)
     tcpsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -440,6 +443,6 @@ if __name__ == '__main__':
     LOCAL_DIR += str(input('Enter path to shared folder: '))
 
     # Creates a new ListenThread thread to listen for connections
-    listenthread = ListenThread(tcpsock, threads, LOCAL_DIR, serverindex, jobqueue)
+    listenthread = ListenThread(tcpsock, THREADS, LOCAL_DIR, SERVER_INDEX, JOBQUEUE)
     listenthread.start()
-    threads['ListenThread'] = listenthread
+    THREADS['ListenThread'] = listenthread
