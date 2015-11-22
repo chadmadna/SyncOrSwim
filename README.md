@@ -3,6 +3,15 @@ Sync or Swim
 
 The only program that synchronizes your directories swimmingly!
 
+Written by:
+Irsyad Nabil 1406546134
+Meta Andrini Utari 1406546153
+
+Team 4 Participation:
+Meta - 50%
+Irsyad - 50%
+Isaac - 0%
+Amel - 0%
 ----------
 
 INSTRUCTIONS
