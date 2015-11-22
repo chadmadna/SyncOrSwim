@@ -75,7 +75,7 @@ This Python program runs Sync or Swim's GUI for users' ease of access and readab
 Checks if all of the entries are valid before continuing on with the rest of the program. If not, then an exception will be raised, specifying to the user which error had occurred, and the program will not run.
 
 > **AppWindow**
-> The WorkerThread class describes sh*t.
+> displays the details of the synchronization process to the user, in the form of 2 frames side-by-side: the client frame and the server frame. Both frames list the content of both directories as synchronization takes place.
 
 #### <i class="icon-check-empty"></i> _index_to_array
 You can rename the current document by clicking the document title in the navigation bar.
@@ -145,16 +145,16 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> The WorkerThread class describes sh*t.
+> describes sh*t.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
 
 > **ListenThread**
-> The ListenThread class describes the server mechanism in listening to any incoming connections from the client.
+> describes the server mechanism in listening to any incoming connections from the client.
 
-#### <i class="icon-check-empty"></i> run
-You can rename the current document by clicking the document title in the navigation bar.
+#### <i class="icon-check"></i> run
+Listens for connections; and when there exist incoming connections from the client, it can handle up to 10 connections. In handling these connections, the function has to wait for an available socket before creating a new thread for them.
 
-#### <i class="icon-check-empty"></i> displayThreads
-You can rename the current document by clicking the document title in the navigation bar.
+#### <i class="icon-check"></i> displayThreads
+Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
