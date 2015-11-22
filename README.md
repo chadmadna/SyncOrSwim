@@ -13,26 +13,6 @@ Irsyad - 50%
 Isaac - 0%
 Amel - 0%
 
-----------
-
-INSTRUCTIONS
-----------
-
-> Make sure that your device and the device you are going to sync to are connected to the Internet.
-
-**[CLIENT]**
-
-1. Run the client side of Sync or Swim program.
-2. Choose the folder the contents you would like to synchronize to another folder, and paste the directory path to the Directory box (e.g.: /Users/lepton/Desktop/test).
-3. Paste the IP address of the destination device to the IP Address box.
-4. Enter a port number you would like to connect to in the Port Number box.
-5. Submit.
-
-**[SERVER]**
-
-1. Run the server side of Sync or Swim program.
-2. Specify the destination folder the client would synchronize to (e.g.: /Users/lepton/Desktop/test2).
-3. Wait until the client initiates connection.
 
 ----------
 
@@ -194,3 +174,4 @@ Make sure that both your device and the server host are connected to the Interne
 
 1. Run the server-side of SyncOrSwim via IDLE or command line.
 2. When prompted, enter the path of the server shared folder.
+3. Wait for client to initiate connection.
