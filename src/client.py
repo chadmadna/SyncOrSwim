@@ -3,6 +3,7 @@
 # Created for Fasilkom UI 2015 Computer Networking course
 # Irsyad Nabil 1406546134
 
+from __future__ import print_function
 import os, sys, traceback, json, shutil, time
 from threading import *
 from socket import *
@@ -320,20 +321,7 @@ class WorkerThread(Thread):
             else:
                 LOCK_1.release()
                 print('LOCK_1 released')
-                            
-    def __repr__(self):
-        return "{} jobs in queue".format(len(self.jobqueue))
-
-def print(*args, **kwargs):
-    with PRINT_LOCK:
-        __builtins__.print(*args, **kwargs)
-        
-def printthreads():
-    with PRINT_LOCK:
-        print('\nCurrent threads list:')
-        THREADS['Main'].displayThreads()
-        print('')
-
+                         
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
     global tcpsock, mainthread
     tcpsock = socket(AF_INET, SOCK_STREAM)
@@ -372,4 +360,3 @@ def getlocaldir():
 
 def getserverdir():
     return mainthread.recvDirTree()
-
