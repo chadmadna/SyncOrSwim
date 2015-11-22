@@ -440,7 +440,14 @@ if __name__ == '__main__':
     tcpsock.setblocking(0.0)
 
     # Prompts the user to input the server's shared folder directory path
-    LOCAL_DIR += str(input('Enter path to shared folder: '))
+    while True:
+        dirpath = str(input('Enter path to shared folder: '))
+        if not os.path.exists(dirpath):
+            print("The path you entered does not exist.")
+            continue
+        elif os.path.exists(dirpath):
+            LOCAL_DIR += dirpath
+            break
 
     # Creates a new ListenThread thread to listen for connections
     listenthread = ListenThread(tcpsock, THREADS, LOCAL_DIR, SERVER_INDEX, JOBQUEUE)

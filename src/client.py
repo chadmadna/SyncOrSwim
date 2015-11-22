@@ -60,7 +60,7 @@ class MainThread(Thread):
             s = self.sock
             ret = b''
             while True:
-                buf = s.recv(BUFFER_SIZE)
+                buf = s.recv(BUF_SIZE)
                 if buf:
                     ret += buf
                     if b'?magic?' in buf:
