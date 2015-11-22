@@ -4,7 +4,8 @@
 # Irsyad Nabil 1406546134
 
 from __future__ import print_function
-import os, sys, traceback, json, shutil, time
+import os, sys, traceback, json, shutil, time, cmd
+from ipaddress import ip_address
 from threading import *
 from socket import *
 
@@ -44,7 +45,6 @@ class MainThread(Thread):
         
     def run(self):
         self.updateIndex()
-        print("Main thread started for " + self.ip + ":" + str(self.port))
 
     def send(self, pkg, isFile=False):
         time.sleep(0.1)
@@ -126,12 +126,12 @@ class MainThread(Thread):
             workerthread.start()
             THREADS['WorkerThread'] = workerthread
             W_SEM.release()
+            workerthread.join()
         except:
             S_SEM.release()
 
     def syncToServer(self):
         S_SEM.acquire()
-        print('S_SEM acquired')
         # Sync client to server
         try:
             print('Started sync to server...')
@@ -141,7 +141,6 @@ class MainThread(Thread):
             self.updateIndex()
             self.send('OK')
             serverdir = self.receive()
-            print(serverdir)
             self.send('OK')
             # Receive and decode index from client
             # Blocks until index received
@@ -163,7 +162,6 @@ class MainThread(Thread):
             clientfiles = []
             for key in clientindex.keys(): clientfiles.append(key)
             clientfiles.sort()
-            print('clientfiles: ', clientfiles)
 
             # Iterate over remote files, add to joblist
             for name in serverfiles:
@@ -230,9 +228,7 @@ class MainThread(Thread):
                     self.wait('OK')
             # End of a sync protocol
             print('Done syncing to server!')
-            print(joblist)
             S_SEM.release()
-            print('S_SEM released')
         except:
             S_SEM.release()
     
@@ -273,6 +269,8 @@ class WorkerThread(Thread):
     """Performs high-level file operations from the job queue
     from a sync job."""
 
+    global LOCAL_DIR
+
     def __init__(self, jobqueue):
         Thread.__init__(self)
         self.jobqueue = jobqueue
@@ -281,7 +279,7 @@ class WorkerThread(Thread):
         """Iterates over the jobqueue and writes changes to
         local directory."""
         
-        os.chdir(LOCAL_DIR)
+        os.chdir(mainthread.clientdir)
         print('Writing to local directory..')
         W_SEM.acquire()
         if not self.jobqueue:
@@ -319,6 +317,68 @@ class WorkerThread(Thread):
     def __repr__(self):
         return "{} jobs in queue".format(len(self.jobqueue))
 
+class cmdApp(cmd.Cmd):
+    """Command line interpreter app that runs interactively."""
+    
+    def __init__(self):
+
+        global LOCAL_DIR, TCP_IP, TCP_PORT
+        
+        cmd.Cmd.__init__(self)
+        print('\n~ SyncOrSwim 1.0 client\n~ Connect to a remote server.\n')
+
+        self.prompt = 'SyncOrSwim >> '
+        
+        while True:
+            dirpath = str(input('Enter path to shared folder: '))
+            if not os.path.exists(dirpath) or not dirpath:
+                print("The path you entered does not exist.")
+                continue
+            LOCAL_DIR = dirpath
+            
+            ipaddr = str(input('IP address: '))
+            if not ip_address(ipaddr) or not ipaddr:
+                print("The IP address you entered is invalid.")
+                continue
+            TCP_IP = ipaddr
+
+            portnum = input('Port number: ')
+            try:
+                portnum = int(portnum)
+            except ValueError:
+                print("The port number you entered is invalid.")
+                continue
+            if not portnum:
+                print("Please enter a port number.")
+                continue
+            TCP_PORT = portnum
+
+            break
+
+        connect(LOCAL_DIR, TCP_IP, TCP_PORT)
+        if mainthread:
+            print("\nType 'syncto' to push local files to server")
+            print("Type 'syncfrom' to pull changes from server to client")
+            print("Type 'serverfiles' to view server files")
+            print("Type 'printthreads' to view spawned threads")
+            print("Type 'close' to exit\n")
+
+    def do_syncto(self, line):
+        syncto()
+
+    def do_syncfrom(self, line):
+        syncfrom()
+
+    def do_serverfiles(self, line):
+        serverfiles()
+
+    def do_printthreads(self, line):
+        printthreads()
+
+    def do_close(self, line):
+        close()
+        
+    
 def print(*args, **kwargs):
     """Overrides the print function so that it uses a lock
     to print output in order."""
@@ -332,18 +392,18 @@ def printThreads():
         print('')
                          
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
+    
     global tcpsock, mainthread, LOCAL_DIR
 
-    LOCAL_DIR = localdir
     tcpsock = socket(AF_INET, SOCK_STREAM)
     tcpsock.settimeout(15)
 
-    print("Connecting to server...")
+    print("Connecting to server at {}:{}...".format(ip, port))
     while True:
         try:
             tcpsock.connect((TCP_IP, TCP_PORT))
             ip, port = tcpsock.getsockname()
-            print('Connected to server {}:{}'.format(ip, port))
+            print('Connected to server on socket {}:{}'.format(ip, port))
             break
         except timeout:
             print('Connection timed out.', file=sys.stderr)
@@ -365,8 +425,64 @@ def syncto():
 def syncfrom():
     mainthread.syncFromServer()
 
-def getlocaldir():
-    return mainthread.getDirTree(LOCAL_DIR)
+def serverfiles():
+    index = mainthread.getIndex()[1]
+    print('\nNAME                          | TYPE | LAST MODIFIED')
+    for k in index.keys():
+        name, ntype, mtime = k, index[k][0], time.ctime(index[k][1])
+        if len(name) > 30:
+            name = '...' + name[len(name)-26:]
+        print('{:30}| {:4} | {}'.format(name, ntype, mtime))
 
-def getserverdir():
-    return mainthread.recvDirTree()
+def close():
+    sys.exit()
+
+if __name__ == '__main__':
+
+    global LOCAL_DIR, TCP_IP, TCP_PORT
+
+    # Running in IDLE
+    if 'idlelib.run' in sys.modules:
+        print('~ SyncOrSwim 1.0 client\n~ Connect to a remote server.\n')
+        while True:
+            dirpath = str(input('Enter path to shared folder: '))
+            if not os.path.exists(dirpath):
+                print("The path you entered does not exist.")
+                continue
+            LOCAL_DIR = dirpath
+            
+            ipaddr = str(input('IP address: '))
+            try:
+                ip_address(ipaddr)
+            except ValueError:
+                print("The IP address you entered is invalid.")
+                continue
+            if not ip_address(ipaddr):
+                print("The IP address you entered is invalid.")
+                continue
+            TCP_IP = ipaddr
+
+            portnum = input('Port number: ')
+            try:
+                portnum = int(portnum)
+            except ValueError:
+                print("The port number you entered is invalid.")
+                continue
+            if not portnum:
+                print("Please enter a port number.")
+                continue
+            TCP_PORT = portnum
+
+            break
+        
+        connect(LOCAL_DIR, TCP_IP, TCP_PORT)
+        if mainthread:
+            print("\nType 'syncto()' to push local files to server")
+            print("Type 'syncfrom()' to pull changes from server to client")
+            print("Type 'serverfiles()' to view server files")
+            print("Type 'printThreads()' to view spawned threads")
+            print("Type 'close()' to exit")
+
+    # Running in CLI
+    elif sys.stdin.isatty():  
+        cmdApp().cmdloop()

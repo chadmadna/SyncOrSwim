@@ -174,6 +174,7 @@ class ClientThread(Thread):
             workerthread.start()
             THREADS['WorkerThread[{}]'.format(self.threadID)] = workerthread
             W_SEM.release()
+            workerthread.join()
         except:
             S_SEM.release()
 
@@ -446,9 +447,8 @@ if __name__ == '__main__':
         if not os.path.exists(dirpath):
             print("The path you entered does not exist.")
             continue
-        elif os.path.exists(dirpath):
-            LOCAL_DIR += dirpath
-            break
+        LOCAL_DIR = dirpath
+        break
 
     # Creates a new ListenThread thread to listen for connections
     listenthread = ListenThread(tcpsock, THREADS, LOCAL_DIR, SERVER_INDEX, JOBQUEUE)
