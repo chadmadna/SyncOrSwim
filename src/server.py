@@ -122,7 +122,7 @@ class ClientThread(Thread):
                     self.serverindex[relpath] = (self.getNametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))
 
     def syncFromClient(self):
-        """Sync local files to client machine by examining client's file index and then
+        """Sync local files from client machine by examining client's file index and then
         send sync and file operation protocols."""
 
         # Acquire the client thread semaphore
@@ -172,7 +172,7 @@ class ClientThread(Thread):
             # Release the semaphore for the worker thread
             workerthread = WorkerThread(self.jobqueue, self)
             workerthread.start()
-            threads['WorkerThread[{}]'.format(self.threadID)] = workerthread
+            THREADS['WorkerThread[{}]'.format(self.threadID)] = workerthread
             W_SEM.release()
         except:
             S_SEM.release()

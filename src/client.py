@@ -81,7 +81,7 @@ class MainThread(Thread):
                     self.clientindex[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
 
     def syncFromServer(self):
-        """Sync local files to client machine by examining client's file index and then
+        """Sync local files from server machine by examining client's file index and then
         send sync and file operation protocols."""
 
         # Acquire the sync thread semaphore
@@ -249,12 +249,6 @@ class MainThread(Thread):
             if s == signal:
                 break
 
-    def displayThreads(self):
-        print('{!s:15}  {!s:20} {}'.format('THREAD NAME','INFO','IS ALIVE'))
-        for key in sorted(list(self.threadlist.keys())):
-            print('{!s:15}: {!s:20} {}'.format(key, 
-                self.threadlist[key], self.threadlist[key].isAlive()))
-
     def getIndex(self):
         self.updateIndex()
         self.send('GETINDEX')
@@ -265,10 +259,19 @@ class MainThread(Thread):
         outpkg = json.dumps(self.clientindex)
         self.send(outpkg)
 
+    def displayThreads(self):
+        print('{!s:15}  {!s:20} {}'.format('THREAD NAME','INFO','IS ALIVE'))
+        for key in sorted(list(self.threadlist.keys())):
+            print('{!s:15}: {!s:20} {}'.format(key, 
+                self.threadlist[key], self.threadlist[key].isAlive()))
+
     def __repr__(self):
+        """Represents the thread in readable string format."""
         return "{}:{}".format(self.ip, self.port)
 
 class WorkerThread(Thread):
+    """Performs high-level file operations from the job queue
+    from a sync job."""
 
     def __init__(self, jobqueue):
         Thread.__init__(self)
@@ -316,6 +319,8 @@ class WorkerThread(Thread):
         return "{} jobs in queue".format(len(self.jobqueue))
 
 def print(*args, **kwargs):
+    """Overrides the print function so that it uses a lock
+    to print output in order."""
     with P_LOCK:
         __builtins__.print(*args, **kwargs)
         
@@ -324,10 +329,6 @@ def printThreads():
         print('\nCurrent threads list:')
         THREADS['Main'].displayThreads()
         print('')
-
-            else:
-                LOCK_1.release()
-                print('LOCK_1 released')
                          
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
     global tcpsock, mainthread
