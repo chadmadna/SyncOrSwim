@@ -12,7 +12,7 @@ server.py
 StackEdit stores your documents in your browser, which means all your documents are automatically saved locally and are accessible **offline!**
 
 > **ClientThread**
-> The ClientThread class describes the server mechanism in handling requests from the client.
+> describes the server mechanism in handling requests from the client.
 
 #### <i class="icon-check"></i> getID
 Assigns an ID to a thread within a critical section.
@@ -54,13 +54,13 @@ You can delete the current document by clicking <i class="icon-trash"></i> **Del
 You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
 
 > **WorkerThread**
-> The WorkerThread class describes sh*t.
+> describes sh*t.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
 
 > **ListenThread**
-> The ListenThread class describes the server mechanism in listening to any incoming connections from the client.
+> describes the server mechanism in listening to any incoming connections from the client.
 
 #### <i class="icon-check-empty"></i> run
 You can rename the current document by clicking the document title in the navigation bar.
