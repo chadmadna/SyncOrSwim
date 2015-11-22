@@ -361,9 +361,3 @@ def syncto():
 
 def syncfrom():
     mainthread.syncFromServer()
-
-def getlocaldir():
-    return mainthread.getDirTree(LOCAL_DIR)
-
-def getserverdir():
-    return mainthread.recvDirTree()
