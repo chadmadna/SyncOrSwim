@@ -420,6 +420,10 @@ def print(*args, **kwargs):
     with P_LOCK:
         __builtins__.print(*args, **kwargs)
 
+def close():
+    """Closes the connection and exits the program."""
+    sys.exit()
+
 if __name__ == '__main__':
 
     # Initialize thread list, server index, and the job queue
