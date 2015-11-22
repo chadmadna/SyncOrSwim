@@ -1,7 +1,7 @@
 Sync or Swim
 ===================
 
-The only program that can synchronize your directories swimmingly!
+The only program that synchronizes your directories swimmingly!
 
 ----------
 
