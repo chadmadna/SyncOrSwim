@@ -40,11 +40,45 @@ class MainThread(Thread):
         self.send(self.clientdir)
         timestamp = self.receive()
         print("Time from server is {}".format(timestamp))
-        self.serverindex = self.recvIndex()
+        self.serverindex = self.getIndex()[0]
         
     def run(self):
         self.updateIndex()
         print("Main thread started for " + self.ip + ":" + str(self.port))
+
+    def send(self, pkg, isFile=False):
+        time.sleep(0.1)
+        with S_LOCK:
+            if not isFile:
+                self.sock.sendall(pkg.encode())
+            elif isFile:
+                self.sock.sendall(pkg)
+            self.sock.sendall('?magic?'.encode())
+
+    def receive(self, isFile=False):
+        with S_LOCK:
+            s = self.sock
+            ret = b''
+            while True:
+                buf = s.recv(BUFFER_SIZE)
+                if buf:
+                    ret += buf
+                    if b'?magic?' in buf:
+                        ret = ret.replace(b'?magic?',b'')
+                        break
+                elif not buf: break
+            return ret if isFile else ret.decode()
+
+    def updateIndex(self):
+        for root, dirs, files in os.walk(self.clientdir):
+            for d in dirs:
+                if not d.startswith('.'):
+                    relpath = os.path.relpath(os.path.join(root, d), self.clientdir)
+                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
+            for f in files:
+                if not f.startswith('.'):
+                    relpath = os.path.relpath(os.path.join(root, f), self.clientdir)
+                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
 
     def syncFromServer(self):
         """Sync local files to client machine by examining client's file index and then
@@ -95,7 +129,7 @@ class MainThread(Thread):
         except:
             S_SEM.release()
 
-    def syncToServer(self):        
+    def syncToServer(self):
         S_SEM.acquire()
         print('S_SEM acquired')
         # Sync client to server
@@ -201,17 +235,6 @@ class MainThread(Thread):
             print('S_SEM released')
         except:
             S_SEM.release()
-        
-    def updateIndex(self):
-        for root, dirs, files in os.walk(self.clientdir):
-            for d in dirs:
-                if not d.startswith('.'):
-                    relpath = os.path.relpath(os.path.join(root, d), self.clientdir)
-                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,d)), os.path.getmtime(os.path.join(root, d)))
-            for f in files:
-                if not f.startswith('.'):
-                    relpath = os.path.relpath(os.path.join(root, f), self.clientdir)
-                    self.clientindex[relpath] = (self.get_nametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
     
     def getNametype(self, path):
         if os.path.isdir(path):
@@ -219,29 +242,6 @@ class MainThread(Thread):
         elif os.path.isfile(path):
             return 'file'
         else: return None
-
-    def send(self, pkg, isbyte=True):
-        time.sleep(0.1)
-        with TCP_LOCK:
-            if isbyte:
-                self.sock.sendall(pkg.encode())
-            if not isbyte:
-                self.sock.sendall(pkg)
-            self.sock.sendall('?magic?'.encode())
-
-    def receive(self, isFile=False):
-        with TCP_LOCK:
-            s = self.sock
-            ret = b''
-            while True:
-                buf = s.recv(BUFFER_SIZE)
-                if buf:
-                    ret += buf
-                    if b'?magic?' in buf:
-                        ret = ret.replace(b'?magic?',b'')
-                        break
-                elif not buf: break
-            return ret if isFile else ret.decode()
 
     def wait(self, signal):
         while True:
@@ -264,24 +264,6 @@ class MainThread(Thread):
     def sendIndex(self):
         outpkg = json.dumps(self.clientindex)
         self.send(outpkg)
-
-    def recvIndex(self):
-        self.send('GETINDEX')
-        return json.loads(self.receive())
-
-    def getDirTree(self, path):
-        d = {'name': os.path.basename(path)}
-        if os.path.isdir(path):
-            d['type'] = "dir"
-            d['children'] = [self.getDirTree(os.path.join(path,x)) \
-                             for x in os.listdir(path)]
-        else:
-            d['type'] = "file"
-        return d
-
-    def recvDirTree(self):
-        self.send('GETDIRTREE')
-        return json.loads(self.receive())
 
     def __repr__(self):
         return "{}:{}".format(self.ip, self.port)
@@ -329,27 +311,24 @@ class WorkerThread(Thread):
                     print('Done writing to local directory!')
                     S_SEM.release()
                     break
-<<<<<<< HEAD
                             
     def __repr__(self):
         return "{} jobs in queue".format(len(self.jobqueue))
 
 def print(*args, **kwargs):
-    with PRINT_LOCK:
+    with P_LOCK:
         __builtins__.print(*args, **kwargs)
         
-def printthreads():
-    with PRINT_LOCK:
+def printThreads():
+    with P_LOCK:
         print('\nCurrent threads list:')
         THREADS['Main'].displayThreads()
         print('')
 
-=======
             else:
                 LOCK_1.release()
                 print('LOCK_1 released')
                          
->>>>>>> origin/master
 def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
     global tcpsock, mainthread
     tcpsock = socket(AF_INET, SOCK_STREAM)
