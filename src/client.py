@@ -7,7 +7,7 @@ import os, sys, traceback, json, shutil, time
 from threading import *
 from socket import *
 
-LOCAL_DIR = r'C:\Users\chadm\Desktop\t2'
+LOCAL_DIR = r''
 TCP_IP = '127.0.0.1'
 TCP_PORT = 9001
 BUFFER_SIZE = 4096
@@ -23,8 +23,6 @@ JOBQUEUE = []
 THREADS = dict()
 
 STATUS = 'Ready.'
-
-del globals()['enumerate']
 
 class MainThread(Thread):
     
@@ -58,159 +56,159 @@ class MainThread(Thread):
         self.serverindex = json.loads(self.receive())
         return (self.clientindex, self.serverindex)
 
-    def sync(self, requestcode):
+    def syncFromServer(self):
         LOCK_1.acquire()
         print('LOCK_1 acquired')
         # Sync server to client
-        if requestcode == 'SYNCFROM':
-            try:
-                print('Started sync from server...')
-                # Send sync signal
-                self.send('SYNCFROM')
-                # Send client directory
-                self.wait('OK')
-                self.send(LOCAL_DIR)
-                # Update index before proceeding
-                self._update_index(self.clientdir, self.clientindex)
+        try:
+            print('Started sync from server...')
+            # Send sync signal
+            self.send('SYNCFROM')
+            # Send client directory
+            self.wait('OK')
+            self.send(LOCAL_DIR)
+            # Update index before proceeding
+            self._update_index(self.clientdir, self.clientindex)
 
-                # Encode, wait for signal and send index to server
-                outpkg = json.dumps(self.clientindex)
-                self.wait('OK')
-                self.send(outpkg)
+            # Encode, wait for signal and send index to server
+            outpkg = json.dumps(self.clientindex)
+            self.wait('OK')
+            self.send(outpkg)
 
-                # Receive requests and files from server
-                while True:
-                    request = self.receive()
-                    if request:
-                        job = tuple(request.split(','))
+            # Receive requests and files from server
+            while True:
+                request = self.receive()
+                if request:
+                    job = tuple(request.split(','))
+                    self.send('OK')
+
+                    # Atomically add a single batch of sync jobs
+                    # Wait and receive file for all copy jobs
+                    if job[0] == 'CP':
+                        file = self.receive(isFile=True)
                         self.send('OK')
+                        # Put job and file in jobqueue
+                        self.jobqueue.append((job, file))
+                    # Put job into jobqueue if not copy job
+                    else:
+                        self.jobqueue.append((job, None))
+                    if job[0] == 'DONE':
+                        print('Done syncing from server!')
+                        break
+            global workerthread
+            workerthread = WorkerThread(self.jobqueue)
+            workerthread.start()
+            THREADS['WorkerThread'] = workerthread
+            LOCK_2.release()
+        except:
+            LOCK_1.release()
 
-                        # Atomically add a single batch of sync jobs
-                        # Wait and receive file for all copy jobs
-                        if job[0] == 'CP':
-                            file = self.receive(isFile=True)
-                            self.send('OK')
-                            # Put job and file in jobqueue
-                            self.jobqueue.append((job, file))
-                        # Put job into jobqueue if not copy job
-                        else:
-                            self.jobqueue.append((job, None))
-                        if job[0] == 'DONE':
-                            print('Done syncing from server!')
-                            break
-                global workerthread
-                workerthread = WorkerThread(self.jobqueue)
-                workerthread.start()
-                THREADS['WorkerThread'] = workerthread
-                LOCK_2.release()
-                print('LOCK_2 released')
-            except:
-                LOCK_1.release()
-
+    def syncToServer(self):        
+        LOCK_1.acquire()
+        print('LOCK_1 acquired')
         # Sync client to server
-        if requestcode == 'SYNCTO':
-            try:
-                print('Started sync to server...')
-                # Send sync signal
-                self.send('SYNCTO,{}'.format(LOCAL_DIR))
-                # Update index before proceeding
-                self._update_index(self.clientdir, self.clientindex)
-                self.send('OK')
-                serverdir = self.receive()
-                print(serverdir)
-                self.send('OK')
-                # Receive and decode index from client
-                # Blocks until index received
-                inpkg = self.receive()
-                serverindex = json.loads(inpkg)
+        try:
+            print('Started sync to server...')
+            # Send sync signal
+            self.send('SYNCTO,{}'.format(LOCAL_DIR))
+            # Update index before proceeding
+            self._update_index(self.clientdir, self.clientindex)
+            self.send('OK')
+            serverdir = self.receive()
+            print(serverdir)
+            self.send('OK')
+            # Receive and decode index from client
+            # Blocks until index received
+            inpkg = self.receive()
+            serverindex = json.loads(inpkg)
 
-                # Setup index and client directory
-                clientindex = self.clientindex
-                clientdir = self.clientdir
+            # Setup index and client directory
+            clientindex = self.clientindex
+            clientdir = self.clientdir
 
-                # Initiate joblist for writing into jobqueue
-                joblist = []
-                joblist.append('SYNCTO,{}'.format(LOCAL_DIR))
+            # Initiate joblist for writing into jobqueue
+            joblist = []
+            joblist.append('SYNCTO,{}'.format(LOCAL_DIR))
 
-                # Setup files and dirs to iterate over
-                serverfiles = []
-                for key in serverindex.keys(): serverfiles.append(key)
-                serverfiles.sort()
-                clientfiles = []
-                for key in clientindex.keys(): clientfiles.append(key)
-                clientfiles.sort()
-                print('clientfiles: ', clientfiles)
+            # Setup files and dirs to iterate over
+            serverfiles = []
+            for key in serverindex.keys(): serverfiles.append(key)
+            serverfiles.sort()
+            clientfiles = []
+            for key in clientindex.keys(): clientfiles.append(key)
+            clientfiles.sort()
+            print('clientfiles: ', clientfiles)
 
-                # Iterate over remote files, add to joblist
-                for name in serverfiles:
+            # Iterate over remote files, add to joblist
+            for name in serverfiles:
 
-                    localpath = os.path.join(clientdir, name)
-                    remotepath = os.path.join(serverdir, name)
-                    localroot = os.path.split(localpath)[0]
-                    remoteroot = os.path.split(remotepath)[0]
+                localpath = os.path.join(clientdir, name)
+                remotepath = os.path.join(serverdir, name)
+                localroot = os.path.split(localpath)[0]
+                remoteroot = os.path.split(remotepath)[0]
 
-                    # Case 1: File/dir exists in remote but doesn't exist in local
-                    # Remove files/dirs in remote that do not exist in local
-                    if not os.path.exists(localpath) and name in serverfiles:
+                # Case 1: File/dir exists in remote but doesn't exist in local
+                # Remove files/dirs in remote that do not exist in local
+                if not os.path.exists(localpath) and name in serverfiles:
 
-                        if serverindex[name][0] == 'dir':
-                            joblist.append('RMDIR,{}'.format(remotepath))
-                        elif serverindex[name][0] == 'file':
-                            joblist.append('RM,{}'.format(remotepath))
-                            
-                # Iterate over local files, add to joblist
-                for name in clientfiles:
-                    
-                    localpath = os.path.join(clientdir, name)
-                    remotepath = os.path.join(serverdir, name)
-                    localroot = os.path.split(localpath)[0]
-                    remoteroot = os.path.split(remotepath)[0]
+                    if serverindex[name][0] == 'dir':
+                        joblist.append('RMDIR,{}'.format(remotepath))
+                    elif serverindex[name][0] == 'file':
+                        joblist.append('RM,{}'.format(remotepath))
+                        
+            # Iterate over local files, add to joblist
+            for name in clientfiles:
+                
+                localpath = os.path.join(clientdir, name)
+                remotepath = os.path.join(serverdir, name)
+                localroot = os.path.split(localpath)[0]
+                remoteroot = os.path.split(remotepath)[0]
 
-                    # Case 2: File/dir doesn't exist in remote but exists in local
-                    # Copy over files/dirs in local to remote
-                    if not name in serverfiles and os.path.exists(localpath):
+                # Case 2: File/dir doesn't exist in remote but exists in local
+                # Copy over files/dirs in local to remote
+                if not name in serverfiles and os.path.exists(localpath):
+
+                    if os.path.isdir(localpath):
+                        joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
+                    else:
+                        joblist.append('CP,{},{}'.format(localpath, remotepath))
+                        
+                # Case 3: File/dir exists both in local and remote
+                # Compare both files/dirs and keep newest in both local and remote
+                elif name in serverfiles and os.path.exists(localpath):
+                    if clientindex[name][1] > clientindex[name][1]:
 
                         if os.path.isdir(localpath):
                             joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
                         else:
                             joblist.append('CP,{},{}'.format(localpath, remotepath))
-                            
-                    # Case 3: File/dir exists both in local and remote
-                    # Compare both files/dirs and keep newest in both local and remote
-                    elif name in serverfiles and os.path.exists(localpath):
-                        if clientindex[name][1] > clientindex[name][1]:
+                        
+            joblist.append('DONE')
 
-                            if os.path.isdir(localpath):
-                                joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
-                            else:
-                                joblist.append('CP,{},{}'.format(localpath, remotepath))
-                            
-                joblist.append('DONE')
+            # Sort and iterate over jobs in joblist, send file if necessary
+            cpdirjobs = []
+            for entry in joblist:
+                if entry.split(',')[0] == 'CPDIR':
+                    cpdirjobs.append(joblist.pop(joblist.index(entry)))
+            for entry in reversed(cpdirjobs):
+                joblist.insert(1, entry)
 
-                # Sort and iterate over jobs in joblist, send file if necessary
-                cpdirjobs = []
-                for entry in joblist:
-                    if entry.split(',')[0] == 'CPDIR':
-                        cpdirjobs.append(joblist.pop(joblist.index(entry)))
-                for entry in reversed(cpdirjobs):
-                    joblist.insert(1, entry)
-
-                for item in joblist:
-                    job = item.split(',')
-                    self.send(item)
+            for item in joblist:
+                job = item.split(',')
+                self.send(item)
+                self.wait('OK')
+                # Send file for each copy jobs
+                if job[0] == 'CP':
+                    with open(job[1], 'rb') as f:
+                        self.send(f.read(), isbyte=False)
                     self.wait('OK')
-                    # Send file for each copy jobs
-                    if job[0] == 'CP':
-                        with open(job[1], 'rb') as f:
-                            self.send(f.read(), isbyte=False)
-                        self.wait('OK')
-                # End of a sync protocol
-                print('Done syncing to server!')
-                print(joblist)
-                LOCK_1.release()
-                print('LOCK_1 released')
-            except:
-                LOCK_1.release()
+            # End of a sync protocol
+            print('Done syncing to server!')
+            print(joblist)
+            LOCK_1.release()
+            print('LOCK_1 released')
+        except:
+            LOCK_1.release()
         
     def _update_index(self, directory, index):
         for root, dirs, files in os.walk(directory):
@@ -364,10 +362,10 @@ def connect(localdir=LOCAL_DIR, ip=TCP_IP, port=TCP_PORT):
     mainthread.start()
 
 def syncto():
-    mainthread.sync('SYNCTO')
+    mainthread.syncToServer()
 
 def syncfrom():
-    mainthread.sync('SYNCFROM')
+    mainthread.syncFromServer()
 
 def getlocaldir():
     return mainthread.getDirTree(LOCAL_DIR)

@@ -45,7 +45,6 @@ class ClientThread(Thread):
             request = self.receive()
             try:
                 requestcode = request.split(',')[0]
-                print(requestcode)
                 if requestcode == 'SYNCFROM':
                     self.syncToClient()
                     continue
