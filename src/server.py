@@ -1,5 +1,9 @@
 # server.py
-import sys, os, select, shutil, json, time, datetime, traceback
+# Implementation of shared folder client-server file synchronization
+# Created for Fasilkom UI 2015 Computer Networking course
+# Irsyad Nabil 1406546134
+
+import os, sys, select, shutil, json, time, datetime, traceback
 from socketserver import ThreadingMixIn
 from threading import *
 from socket import *
@@ -428,6 +432,9 @@ if __name__ == '__main__':
     tcpsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     tcpsock.bind(('', TCP_PORT))
     tcpsock.setblocking(0.0)
+
+    # Prompts the user to input the server's shared folder directory path
+    LOCAL_DIR += str(input('Enter path to shared folder: '))
 
     # Creates a new ListenThread thread to listen for connections
     listenthread = ListenThread(tcpsock, threads, LOCAL_DIR, serverindex, jobqueue)
