@@ -4,7 +4,7 @@
 # Irsyad Nabil 1406546134
 
 from __future__ import print_function
-import os, sys, traceback, json, shutil, time, cmd
+import os, sys, json, shutil, time, cmd
 from ipaddress import ip_address
 from threading import *
 from socket import *
@@ -41,7 +41,7 @@ class MainThread(Thread):
         self.send(self.clientdir)
         timestamp = self.receive()
         print("Time from server is {}".format(timestamp))
-        self.serverindex = self.getIndex()[0]
+        self.serverindex = self.getIndex()[1]
         
     def run(self):
         self.updateIndex()
@@ -79,7 +79,7 @@ class MainThread(Thread):
                 if not f.startswith('.'):
                     relpath = os.path.relpath(os.path.join(root, f), self.clientdir)
                     self.clientindex[relpath] = (self.getNametype(os.path.join(root,f)), os.path.getmtime(os.path.join(root, f)))        
-
+        
     def syncFromServer(self):
         """Sync local files from server machine by examining client's file index and then
         send sync and file operation protocols."""
@@ -87,152 +87,158 @@ class MainThread(Thread):
         # Acquire the sync thread semaphore
         S_SEM.acquire()
         self.updateIndex()
-        try:
-            # Send request, wait for signal then send client's directory
-            print('Started sync from server...')
-            self.send('SYNCFROM')
-            self.wait('OK')
-            self.send(LOCAL_DIR)
+##        try:
+        # Send request, wait for signal then send client's directory
+        print('Started sync from server...')
+        self.send('SYNCFROM')
+        self.wait('OK')
+        self.send(LOCAL_DIR)
 
-            # Encode, wait for signal and send index to server
-            outpkg = json.dumps(self.clientindex)
-            self.wait('OK')
-            self.send(outpkg)
+        # Encode, wait for signal and send index to server
+        outpkg = json.dumps(self.clientindex)
+        self.wait('OK')
+        self.send(outpkg)
 
-            # Receive requests and files from server
-            while True:
-                request = self.receive()
-                if request:
-                    job = tuple(request.split(','))
+        # Receive requests and files from server
+        while True:
+            request = self.receive()
+            if request:
+                job = tuple(request.split(','))
+                self.send('OK')
+
+                # Atomically add a single batch of sync jobs
+                # Wait and receive file for all copy jobs
+                if job[0] == 'CP':
+                    file = self.receive(isFile=True)
                     self.send('OK')
-
-                    # Atomically add a single batch of sync jobs
-                    # Wait and receive file for all copy jobs
-                    if job[0] == 'CP':
-                        file = self.receive(isFile=True)
-                        self.send('OK')
-                        # Put job and file in jobqueue
-                        self.jobqueue.append((job, file))
-                    # Put job into jobqueue if not copy job
-                    else:
-                        self.jobqueue.append((job, None))
-                    if job[0] == 'DONE':
-                        print('Done syncing from server!')
-                        break
-            global workerthread
-            workerthread = WorkerThread(self.jobqueue)
-            workerthread.start()
-            THREADS['WorkerThread'] = workerthread
-            W_SEM.release()
-            self.updateIndex()
-            workerthread.join()
-        except:
-            S_SEM.release()
-            self.updateIndex()
+                    # Put job and file in jobqueue
+                    self.jobqueue.append((job, file))
+                # Put job into jobqueue if not copy job
+                else:
+                    self.jobqueue.append((job, None))
+                if job[0] == 'DONE':
+                    print('Done syncing from server!')
+                    break
+        global workerthread
+        workerthread = WorkerThread(self.jobqueue)
+        workerthread.start()
+        THREADS['WorkerThread'] = workerthread
+        W_SEM.release()
+        self.updateIndex()
+        workerthread.join()
+##        except:
+##            S_SEM.release()
+##            self.updateIndex()
 
     def syncToServer(self):
         S_SEM.acquire()
         self.updateIndex()
+        displayfiles(self.clientindex)
+        displayfiles(self.serverindex)
         # Sync client to server
-        try:
-            print('Started sync to server...')
-            # Send sync signal
-            self.send('SYNCTO,{}'.format(LOCAL_DIR))
+##        try:
+        print('Started sync to server...')
+        # Send sync signal
+        self.send('SYNCTO,{}'.format(LOCAL_DIR))
 
-            self.send('OK')
-            serverdir = self.receive()
-            self.send('OK')
-            # Receive and decode index from client
-            # Blocks until index received
-            inpkg = self.receive()
-            serverindex = json.loads(inpkg)
+        self.send('OK')
+        serverdir = self.receive()
+        self.send('OK')
+        # Receive and decode index from client
+        # Blocks until index received
+        inpkg = self.receive()
+        serverindex = json.loads(inpkg)
 
-            # Setup index and client directory
-            clientindex = self.clientindex
-            clientdir = self.clientdir
+        # Setup index and client directory
+        clientindex = self.clientindex
+        clientdir = self.clientdir
 
-            # Initiate joblist for writing into jobqueue
-            joblist = []
-            joblist.append('SYNCTO,{}'.format(LOCAL_DIR))
+        # Initiate joblist for writing into jobqueue
+        joblist = []
+        joblist.append('SYNCTO,{}'.format(LOCAL_DIR))
 
-            # Setup files and dirs to iterate over
-            serverfiles = []
-            for key in serverindex.keys(): serverfiles.append(key)
-            serverfiles.sort()
-            clientfiles = []
-            for key in clientindex.keys(): clientfiles.append(key)
-            clientfiles.sort()
+        # Setup files and dirs to iterate over
+        serverfiles = []
+        for key in serverindex.keys(): serverfiles.append(key)
+        serverfiles.sort()
+        clientfiles = []
+        for key in clientindex.keys(): clientfiles.append(key)
+        clientfiles.sort()
 
-            # Iterate over remote files, add to joblist
-            for name in serverfiles:
+        # Iterate over remote files, add to joblist
+        for name in serverfiles:
 
-                localpath = os.path.join(clientdir, name)
-                remotepath = os.path.join(serverdir, name)
-                localroot = os.path.split(localpath)[0]
-                remoteroot = os.path.split(remotepath)[0]
+            localpath = os.path.join(clientdir, name)
+            remotepath = os.path.join(serverdir, name)
+            localroot = os.path.split(localpath)[0]
+            remoteroot = os.path.split(remotepath)[0]
 
-                # Case 1: File/dir exists in remote but doesn't exist in local
-                # Remove files/dirs in remote that do not exist in local
-                if not os.path.exists(localpath) and name in serverfiles:
+            # Case 1: File/dir exists in remote but doesn't exist in local
+            # Remove files/dirs in remote that do not exist in local
+            if not os.path.exists(localpath) and name in serverfiles:
 
-                    if serverindex[name][0] == 'dir':
-                        joblist.append('RMDIR,{}'.format(remotepath))
-                    elif serverindex[name][0] == 'file':
-                        joblist.append('RM,{}'.format(remotepath))
-                        
-            # Iterate over local files, add to joblist
-            for name in clientfiles:
-                
-                localpath = os.path.join(clientdir, name)
-                remotepath = os.path.join(serverdir, name)
-                localroot = os.path.split(localpath)[0]
-                remoteroot = os.path.split(remotepath)[0]
+                if serverindex[name][0] == 'dir':
+                    joblist.append('RMDIR,{}'.format(remotepath))
+                elif serverindex[name][0] == 'file':
+                    joblist.append('RM,{}'.format(remotepath))
+                    
+        # Iterate over local files, add to joblist
+        for name in clientfiles:
+            
+            localpath = os.path.join(clientdir, name)
+            remotepath = os.path.join(serverdir, name)
+            localroot = os.path.split(localpath)[0]
+            remoteroot = os.path.split(remotepath)[0]
 
-                # Case 2: File/dir doesn't exist in remote but exists in local
-                # Copy over files/dirs in local to remote
-                if not name in serverfiles and os.path.exists(localpath):
+            # Case 2: File/dir doesn't exist in remote but exists in local
+            # Copy over files/dirs in local to remote
+            if not name in serverfiles and os.path.exists(localpath):
+
+                if os.path.isdir(localpath):
+                    joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
+                else:
+                    joblist.append('CP,{},{}'.format(localpath, remotepath))
+                    
+            # Case 3: File/dir exists both in local and remote
+            # Compare both files/dirs and keep newest in both local and remote
+            elif name in serverfiles and os.path.exists(localpath):
+                if clientindex[name][1] > serverindex[name][1]:
 
                     if os.path.isdir(localpath):
                         joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
                     else:
                         joblist.append('CP,{},{}'.format(localpath, remotepath))
-                        
-                # Case 3: File/dir exists both in local and remote
-                # Compare both files/dirs and keep newest in both local and remote
-                elif name in serverfiles and os.path.exists(localpath):
-                    if clientindex[name][1] > clientindex[name][1]:
 
-                        if os.path.isdir(localpath):
-                            joblist.append('CPDIR,{},{}'.format(localpath, remotepath))
-                        else:
-                            joblist.append('CP,{},{}'.format(localpath, remotepath))
-                        
-            joblist.append('DONE')
+        # End the job list
+        joblist.append('DONE')
 
-            # Sort and iterate over jobs in joblist, send file if necessary
-            cpdirjobs = []
-            for entry in joblist:
-                if entry.split(',')[0] == 'CPDIR':
-                    cpdirjobs.append(joblist.pop(joblist.index(entry)))
-            for entry in reversed(cpdirjobs):
-                joblist.insert(1, entry)
+        # Sort and iterate over jobs in joblist, send file if necessary
+        cpdirjobs = []
+        for entry in joblist:
+            if entry.split(',')[0] == 'CPDIR':
+                cpdirjobs.append(joblist.pop(joblist.index(entry)))
+        for entry in reversed(cpdirjobs):
+            joblist.insert(1, entry)
 
-            for item in joblist:
-                job = item.split(',')
-                self.send(item)
+        # Send needed files
+        for item in joblist:
+            job = item.split(',')
+            self.send(item)
+            self.wait('OK')
+            # Send file for each copy jobs
+            if job[0] == 'CP':
+                with open(job[1], 'rb') as f:
+                    self.send(f.read(), isFile=True)
                 self.wait('OK')
-                # Send file for each copy jobs
-                if job[0] == 'CP':
-                    with open(job[1], 'rb') as f:
-                        self.send(f.read(), isbyte=False)
-                    self.wait('OK')
-            # End of a sync protocol
-            print('Done syncing to server!')
-            S_SEM.release()
-            self.updateIndex()
-        except:
-            S_SEM.release()
-            self.updateIndex()
+                
+        # End of a sync protocol
+        print('Done syncing to server!')
+        S_SEM.release()
+        self.updateIndex()
+##        except:
+##            print('Sync failed.')
+##            S_SEM.release()
+##            self.updateIndex()
     
     def getNametype(self, path):
         if os.path.isdir(path):
@@ -369,6 +375,7 @@ class cmdApp(cmd.Cmd):
         if mainthread:
             print("\nType 'syncto' to push local files to server")
             print("Type 'syncfrom' to pull changes from server to client")
+            print("Type 'clientfiles' to view client files")
             print("Type 'serverfiles' to view server files")
             print("Type 'printthreads' to view spawned threads")
             print("Type 'exit' close connection and exit\n")
@@ -379,8 +386,11 @@ class cmdApp(cmd.Cmd):
     def do_syncfrom(self, line):
         syncfrom()
 
+    def do_clientfiles(self, line):
+        displayfiles(mainthread.getIndex()[0])
+
     def do_serverfiles(self, line):
-        serverfiles()
+        displayfiles(mainthread.getIndex()[1])
 
     def do_printthreads(self, line):
         printthreads()
@@ -434,14 +444,19 @@ def syncto():
 def syncfrom():
     mainthread.syncFromServer()
 
-def serverfiles():
-    index = mainthread.getIndex()[1]
+def displayfiles(index):
     print('\nNAME'+46*' '+'| TYPE | LAST MODIFIED')
     for k in index.keys():
         name, ntype, mtime = k, index[k][0], time.ctime(index[k][1])
         if len(name) > 50:
             name = '...' + name[len(name)-46:]
         print('{:50}| {:4} | {}'.format(name, ntype, mtime))
+
+def clientindex():
+    displayfiles(mainthread.getIndex()[0])
+    
+def serverfiles():
+    displayfiles(mainthread.getIndex()[1])
 
 def close():
     sys.exit()
@@ -489,6 +504,7 @@ if __name__ == '__main__':
         if mainthread:
             print("\nType 'syncto()' to push local files to server")
             print("Type 'syncfrom()' to pull changes from server to client")
+            print("Type 'clientfiles()' to view client files")
             print("Type 'serverfiles()' to view server files")
             print("Type 'printThreads()' to view spawned threads")
             print("Type 'close()' to exit")
