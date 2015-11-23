@@ -13,12 +13,6 @@ Irsyad - 50%
 Isaac - 0%
 Amel - 0%
 
-
-Sync or Swim
-===================
-
-The only program that synchronizes your directories swimmingly!
-
 ----------
 
 INSTRUCTIONS
@@ -94,45 +88,6 @@ Iterates over the job queue and applies the changes to the client directory one 
 ----------
 
 
-client_GUI.py
--------------
-
-> **LoginWindow**
-> is the main window that users interact with in order to use the program. It first asks for the path of the directory that users would like to sync from, the IP address of the destination machine, and the port number.
-
-#### <i class="icon-check"></i> storeEntry
-Checks if all of the entries are valid before continuing on with the rest of the program. If not, then an exception will be raised, specifying to the user which error had occurred, and the program will not run.
-
-> **AppWindow**
-> displays the details of the synchronization process to the user, in the form of 2 frames side-by-side: the client frame and the server frame. Both frames list the content of both directories as synchronization takes place.
-
-#### <i class="icon-check-empty"></i> _index_to_array
-You can rename the current document by clicking the document title in the navigation bar.
-
-#### <i class="icon-check-empty"></i> _setup_widgets
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> _build_tree
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> sortby
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> syncfrom
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> syncto
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> updatelocaltree
-Assigns an ID to a thread within a critical section.
-
-#### <i class="icon-check-empty"></i> updateservertree
-Assigns an ID to a thread within a critical section.
-
-----------
-
-
 server.py
 -------------
 
@@ -190,4 +145,3 @@ Listens for connections; and when there exist incoming connections from the clie
 
 #### <i class="icon-check"></i> displayThreads
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
-
