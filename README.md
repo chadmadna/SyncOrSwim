@@ -18,20 +18,29 @@ Amel - 0%
 INSTRUCTIONS
 ----------
 
-> Make sure that your device and the device you are going to sync to are connected to the Internet.
+Make sure that your device and the device you are going to sync to are connected to the Internet.
 
-**[CLIENT]**
+This program runs on Command Prompt (Windows) and Terminal (Linux). Executable binaries are located in /dist. Otherwise, run it in Python via command line or Python IDLE.
+
+**Client-side**
 
 1. Run the client side of Sync or Swim program.
 2. Choose the folder the contents you would like to synchronize to another folder, and paste the directory path to the Directory box (e.g.: /Users/lepton/Desktop/test).
-3. Paste the IP address of the destination device to the IP Address box.
+3. Paste the IP address of the destination device to the IP Address box (e.g.: 127.0.0.1 for local host).
 4. Enter a port number you would like to connect to in the Port Number box.
-5. Submit.
+5. The program has 6 processes you could choose from:
+	- syncto, to sync the contents of the client directory to the server directory.
+	- syncfrom, to sync the contents of the server directory to the client directory.
+	- serverfiles, to list the contents of the server directory and provide the type of each individual content (file or directory) as well as its modification time.
+	- clientfiles, to list the contents of the client directory and provide the type of each individual content (file or directory) as well as its modification time.
+	- printthreads, to list all spawned threads.
+	- exit, to exit the program.
+6. Submit.
 
-**[SERVER]**
+**Server-side**
 
 1. Run the server side of Sync or Swim program.
-2. Specify the destination folder the client would synchronize to (e.g.: /Users/lepton/Desktop/test2).
+2. Specify the destination folder the client would synchronize to and from (e.g.: /Users/lepton/Desktop/test2).
 3. Wait until the client initiates connection.
 
 ----------
@@ -49,7 +58,7 @@ Updates the client index.
 Sends all packages in the queue to the server within a critical condition so that the packages would be sent in order. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
 #### <i class="icon-check"></i> receive
-Receives incoming connection through socket. Received packages go through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte format.
+Receives incoming connection through socket. Packages are received through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte format.
 
 #### <i class="icon-check"></i> updateIndex
 Updates file indices within the client directory in the form of a dictionary, excluding hidden directories and files.
@@ -101,7 +110,7 @@ Processes every thread that is received one at a time by determining which actio
 Sends all packages in the queue to the client through an available socket. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
 #### <i class="icon-check"></i> receive
-Receives incoming connection through socket. Received packages go through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte form.
+Receives incoming connection through socket. Packages are received through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte form.
 
 #### <i class="icon-check"></i> getNametype
 Returns whether a predetermined path based on input is a directory or a file.
