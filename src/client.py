@@ -332,9 +332,24 @@ class cmdApp(cmd.Cmd):
         
         cmd.Cmd.__init__(self)
         print('\n~ SyncOrSwim 1.0 client\n~ Connect to a remote server.\n')
-
         self.prompt = 'SyncOrSwim >> '
+        self.promptEntry()
+        connect(LOCAL_DIR, TCP_IP, TCP_PORT)
         
+        try:
+            if mainthread:
+                print("\nType 'syncto' to push local files to server")
+                print("Type 'syncfrom' to pull changes from server to client")
+                print("Type 'clientfiles' to view client files")
+                print("Type 'serverfiles' to view server files")
+                print("Type 'printthreads' to view spawned threads")
+                print("Type 'exit' close connection and exit\n")
+                
+        except NameError:
+            print('Failed to connect to server. Please try again.')
+            self.promptEntry()
+            
+    def promptEntry(self):
         while True:
             dirpath = str(input('Enter path to shared folder: '))
             if not os.path.exists(dirpath):
@@ -368,16 +383,7 @@ class cmdApp(cmd.Cmd):
                 continue
             TCP_PORT = portnum
             break
-
-        connect(LOCAL_DIR, TCP_IP, TCP_PORT)
-        if mainthread:
-            print("\nType 'syncto' to push local files to server")
-            print("Type 'syncfrom' to pull changes from server to client")
-            print("Type 'clientfiles' to view client files")
-            print("Type 'serverfiles' to view server files")
-            print("Type 'printthreads' to view spawned threads")
-            print("Type 'exit' close connection and exit\n")
-
+        
     def do_syncto(self, line):
         syncto()
 
@@ -397,11 +403,11 @@ class cmdApp(cmd.Cmd):
         close()
         
     
-##def print(*args, **kwargs):
-##    """Overrides the print function so that it uses a lock
-##    to print output in order."""
-##    with P_LOCK:
-##        __builtins__.print(*args, **kwargs)
+def print(*args, **kwargs):
+    """Overrides the print function so that it uses a lock
+    to print output in order."""
+    with P_LOCK:
+        __builtins__.print(*args, **kwargs)
         
 def printthreads():
     print('\nCurrent threads list:')

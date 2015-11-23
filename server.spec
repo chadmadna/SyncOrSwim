@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['src/server.py'],
-             pathex=['/home/irsyad/SyncOrSwim'],
+a = Analysis(['src\\server.py'],
+             pathex=['C:\\Users\\chadm\\Documents\\Fasilkom Laif\\Computer Networks\\SyncOrSwim'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -25,4 +25,4 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=True )
+          console=True , icon='assets\\syncorswim.ico')
