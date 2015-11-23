@@ -86,15 +86,13 @@ class MainThread(Thread):
 
         # Acquire the sync thread semaphore
         S_SEM.acquire()
+        self.updateIndex()
         try:
             # Send request, wait for signal then send client's directory
             print('Started sync from server...')
             self.send('SYNCFROM')
             self.wait('OK')
             self.send(LOCAL_DIR)
-
-            # Update index before proceeding
-            self.updateIndex()
 
             # Encode, wait for signal and send index to server
             outpkg = json.dumps(self.clientindex)
@@ -126,19 +124,21 @@ class MainThread(Thread):
             workerthread.start()
             THREADS['WorkerThread'] = workerthread
             W_SEM.release()
+            self.updateIndex()
             workerthread.join()
         except:
             S_SEM.release()
+            self.updateIndex()
 
     def syncToServer(self):
         S_SEM.acquire()
+        self.updateIndex()
         # Sync client to server
         try:
             print('Started sync to server...')
             # Send sync signal
             self.send('SYNCTO,{}'.format(LOCAL_DIR))
-            # Update index before proceeding
-            self.updateIndex()
+
             self.send('OK')
             serverdir = self.receive()
             self.send('OK')
@@ -229,8 +229,10 @@ class MainThread(Thread):
             # End of a sync protocol
             print('Done syncing to server!')
             S_SEM.release()
+            self.updateIndex()
         except:
             S_SEM.release()
+            self.updateIndex()
     
     def getNametype(self, path):
         if os.path.isdir(path):
@@ -448,7 +450,7 @@ if __name__ == '__main__':
 
     # Running in IDLE
     if 'idlelib.run' in sys.modules:
-        print('~ SyncOrSwim 1.0 client\n~ Connect to a remote server.\n')
+        print('\n~ SyncOrSwim 1.0 client\n~ Connect to a remote server.\n')
         while True:
             dirpath = str(input('Enter path to shared folder: '))
             if not os.path.exists(dirpath):

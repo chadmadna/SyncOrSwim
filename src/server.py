@@ -127,14 +127,12 @@ class ClientThread(Thread):
 
         # Acquire the client thread semaphore
         S_SEM.acquire()
+        self.updateIndex()
         try:
             # Wait for signal then sends server's directory
             print('Started sync from client...')
             self.wait('OK')
             self.send(LOCAL_DIR)
-
-            # Update index before proceeding
-            self.updateIndex()
 
             # Encode, wait for signal then send index to client
             outpkg = json.dumps(self.serverindex)
@@ -175,19 +173,19 @@ class ClientThread(Thread):
             THREADS['WorkerThread[{}]'.format(self.threadID)] = workerthread
             W_SEM.release()
             workerthread.join()
+            self.updateIndex()
         except:
             S_SEM.release()
+            self.updateIndex()
 
     def syncToClient(self):
 
         # Acquire the client thread semaphore
         S_SEM.acquire()
+        self.updateIndex()
 
         # Sync server from client
         print('Started sync to client...')
-
-        # Update index before proceeding
-        self.updateIndex()
         self.send('OK')
 
         # Receive client directory
@@ -285,6 +283,7 @@ class ClientThread(Thread):
         # End of a sync protocol
         print('Done syncing to client!')
         S_SEM.release()
+        self.updateIndex()
 
     def getNametype(self, path):
         """Returns a string representing the type of a path name."""
