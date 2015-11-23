@@ -35,7 +35,6 @@ INSTRUCTIONS
 	- clientfiles, to list the contents of the client directory and provide the type of each individual content (file or directory) as well as its modification time.
 	- printthreads, to list all spawned threads.
 	- exit, to exit the program.
-6. Submit.
 
 **Server-side**
 
