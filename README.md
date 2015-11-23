@@ -50,71 +50,71 @@ client.py
 > **MainThread**
 > describes the client mechanism in creating requests and processing server responses.
 
-#### <i class="icon-check"></i> run
+#### run
 Updates the client index.
 
-#### <i class="icon-check"></i> send
+#### send
 Sends all packages in the queue to the server within a critical condition so that the packages would be sent in order. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
-#### <i class="icon-check"></i> receive
+#### receive
 Receives incoming connection through socket. Packages are received through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte format.
 
-#### <i class="icon-check"></i> updateIndex
+#### updateIndex
 Updates file indices within the client directory in the form of a dictionary, excluding hidden directories and files.
 
-#### <i class="icon-check"></i> syncFromServer
+#### syncFromServer
 Synchronizes the contents from the server directory to the client directory. First, it would send the client index to the server for comparison. If the job is to copy a file/directory, then it would store the corresponding file/directory from the server and append it with the job type to the job queue. Other job types are added to the job queue as is.
 
-#### <i class="icon-check"></i> syncToServer
+#### syncToServer
 Synchronizes the contents from the client directory to the server directory. Since the client is "in charge" of handling the synchronizing, so to speak, this function is equipped to handle 3 primary cases:
 
 1. A file/directory exists in server but not in client. In this case, the file/directory in question will be removed from the server directory.
 2. A file/directory exists in client but not in server. In this case, the file/directory in question will be copied to the server directory.
 3. A file/directory exists in both client and server. In this case, the modification time of the file/directory in question will be compared. The older copy of the two will be updated with the most recently modified copy.
 
-#### <i class="icon-check"></i> getNametype
+#### getNametype
 Returns whether a predetermined path based on input is a directory or a file.
 
-#### <i class="icon-check"></i> wait
+#### wait
 Receives connection from server on a non-conditional loop without processing any possible transmissions until the server sends an ‘OK’ signal.
 
-#### <i class="icon-check"></i> getIndex
+#### getIndex
 Updates client index, sends a request for server index, and then returns both client and server indices.
 
-#### <i class="icon-check"></i> sendIndex
+#### sendIndex
 Sends client index as a dump package to the server.
 
-#### <i class="icon-check"></i> displayThreads
+#### displayThreads
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
 
 > **WorkerThread**
 > describes the mechanism of writing the changes made after synchronization unto the local (client) disk.
 
-#### <i class="icon-check"></i> run
+#### run
 Iterates over the job queue and applies the changes to the client directory one by one.
 
 > **cmdApp**
 > Command Line Interpreter app that runs interactively.
 
-#### <i class="icon-check-empty"></i> __init__
+#### __init__
 Prompts the user for the shared folder path, the destination IP address, and port number, and validates these 3 entries. Afterwards, it lists 6 instructions the user can execute.
 
-#### <i class="icon-check-empty"></i> do_syncto
+#### do_syncto
 Pushes local files to server.
 
-#### <i class="icon-check-empty"></i> do_syncfrom
+#### do_syncfrom
 Pulls changes from server to client.
 
-#### <i class="icon-check-empty"></i> do_clientfiles
+#### do_clientfiles
 Lists files in client directory.
 
-#### <i class="icon-check-empty"></i> do_serverfiles
+#### do_serverfiles
 Lists files in server directory.
 
-#### <i class="icon-check-empty"></i> do_printthreads
+#### do_printthreads
 Lists spawned threads.
 
-#### <i class="icon-check-empty"></i> do_exit
+#### do_exit
 Closes connection and exits the program.
 
 ----------
@@ -126,54 +126,54 @@ server.py
 > **ClientThread**
 > The ClientThread class describes the server mechanism in handling requests from the client.
 
-#### <i class="icon-check"></i> run
+#### run
 Processes every thread that is received one at a time by determining which action to take based on the request code of the thread. The parsing of the threads continue until the TCP socket connection is closed or when a keyboard interrupt occurs.
 
-#### <i class="icon-check"></i> send
+#### send
 Sends all packages in the queue to the client through an available socket. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
-#### <i class="icon-check"></i> receive
+#### receive
 Receives incoming connection through socket. Packages are received through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte form.
 
-#### <i class="icon-check"></i> getNametype
+#### getNametype
 Returns whether a predetermined path based on input is a directory or a file.
 
-#### <i class="icon-check"></i> sendTime
+#### sendTime
 Retrieves the date and time from the system and sends it as a package to the client.
 
-#### <i class="icon-check"></i> sendIndex
+#### sendIndex
 Updates the server index and sends the updated index as a dump package to the client.
 
-#### <i class="icon-check"></i> wait
+#### wait
 Receives connection from client on a non-conditional loop without processing any possible transmissions until the client sends an ‘OK’ signal.
 
-#### <i class="icon-check"></i> updateIndex
+#### updateIndex
 Updates file indices within the server directory in the form of a dictionary, excluding hidden directories and files.
 
-#### <i class="icon-check"></i> syncFromClient
+#### syncFromClient
 Synchronizes the contents from the client directory to the server directory. First, it would send the server index to the client for comparison. If the job is to copy a file/directory, then it would store the corresponding file/directory from the client and append it with the job type to the job queue. Other job types are added to the job queue as is.
 
-#### <i class="icon-check"></i> syncToClient
+#### syncToClient
 Synchronizes the contents from the server directory to the client directory. Since the server is "in charge" of handling the synchronizing, so to speak, this function is equipped to handle 3 primary cases:
 
 1. A file/directory exists in client but not in server. In this case, the file/directory in question will be removed from the client directory.
 2. A file/directory exists in server but not in client. In this case, the file/directory in question will be copied to the client directory.
 3. A file/directory exists in both server and client. In this case, the modification time of the file/directory in question will be compared. The older copy of the two will be updated with the most recently modified copy.
 
-#### <i class="icon-check"></i> getID
+#### getID
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
 > describes the mechanism of writing the changes made after synchronization unto the remote (server) disk.
 
-#### <i class="icon-check"></i> run
+#### run
 Iterates over the job queue and applies the changes to the server directory one by one.
 
 > **ListenThread**
 > describes the server mechanism in listening to any incoming connections from the client.
 
-#### <i class="icon-check"></i> run
+#### run
 Listens for connections; and when there exist incoming connections from the client, it can handle up to 10 connections. In handling these connections, the function has to wait for an available socket before creating a new thread for them.
 
-#### <i class="icon-check"></i> displayThreads
+#### displayThreads
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
