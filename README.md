@@ -18,9 +18,9 @@ Amel - 0%
 INSTRUCTIONS
 ----------
 
-Make sure that your device and the device you are going to sync to are connected to the Internet.
+__Make sure that your device and the device you are going to sync to are connected to the Internet.__
 
-This program runs on Command Prompt (Windows) and Terminal (Linux). Executable binaries are located in /dist. Otherwise, run it in Python via command line or Python IDLE.
+> This program runs on Command Prompt (Windows) and Terminal (Linux). Executable binaries are located in /dist. Otherwise, run it in Python via command line or Python IDLE.
 
 **Client-side**
 
