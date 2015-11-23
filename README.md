@@ -93,6 +93,30 @@ Prints out the details of all spawned threads, including an information of wheth
 #### <i class="icon-check"></i> run
 Iterates over the job queue and applies the changes to the client directory one by one.
 
+> **cmdApp**
+> Command Line Interpreter app that runs interactively.
+
+#### <i class="icon-check-empty"></i> __init__
+Prompts the user for the shared folder path, the destination IP address, and port number, and validates these 3 entries. Afterwards, it lists 6 instructions the user can execute.
+
+#### <i class="icon-check-empty"></i> do_syncto
+Pushes local files to server.
+
+#### <i class="icon-check-empty"></i> do_syncfrom
+Pulls changes from server to client.
+
+#### <i class="icon-check-empty"></i> do_clientfiles
+Lists files in client directory.
+
+#### <i class="icon-check-empty"></i> do_serverfiles
+Lists files in server directory.
+
+#### <i class="icon-check-empty"></i> do_printthreads
+Lists spawned threads.
+
+#### <i class="icon-check-empty"></i> do_exit
+Closes connection and exits the program.
+
 ----------
 
 
