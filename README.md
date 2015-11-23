@@ -1,4 +1,4 @@
-Sync or Swim
+﻿Sync or Swim
 ===================
 
 The only program that synchronizes your directories swimmingly!
@@ -14,6 +14,32 @@ Isaac - 0%
 Amel - 0%
 
 
+Sync or Swim
+===================
+
+The only program that synchronizes your directories swimmingly!
+
+----------
+
+INSTRUCTIONS
+----------
+
+> Make sure that your device and the device you are going to sync to are connected to the Internet.
+
+**[CLIENT]**
+
+1. Run the client side of Sync or Swim program.
+2. Choose the folder the contents you would like to synchronize to another folder, and paste the directory path to the Directory box (e.g.: /Users/lepton/Desktop/test).
+3. Paste the IP address of the destination device to the IP Address box.
+4. Enter a port number you would like to connect to in the Port Number box.
+5. Submit.
+
+**[SERVER]**
+
+1. Run the server side of Sync or Swim program.
+2. Specify the destination folder the client would synchronize to (e.g.: /Users/lepton/Desktop/test2).
+3. Wait until the client initiates connection.
+
 ----------
 
 client.py
@@ -23,22 +49,26 @@ client.py
 > describes the client mechanism in creating requests and processing server responses.
 
 #### <i class="icon-check"></i> run
-Updates the client index, and notifies that the main thread is running and ready to receive requests/responses.
+Updates the client index.
 
 #### <i class="icon-check"></i> send
-Sends all packages in the queue to be processed by the server, where the string '?magic?' is a makeshift codeword indicating the end of transmission.
+Sends all packages in the queue to the server within a critical condition so that the packages would be sent in order. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
-#### <i class="icon-check-empty"></i> receive
-Creates a directory tree that starts from the root directory in the form of a (nested) dictionary. If a child directory is encountered during the traversal of the path, then the function recursively traverses down said child directory. Else, if a file is encountered during the traversal of the path, it is stored in the dictionary as it is under the appropriate directory.
+#### <i class="icon-check"></i> receive
+Receives incoming connection through socket. Received packages go through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte format.
 
 #### <i class="icon-check"></i> updateIndex
 Updates file indices within the client directory in the form of a dictionary, excluding hidden directories and files.
 
-#### <i class="icon-check-empty"></i> syncFromServer
-You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
+#### <i class="icon-check"></i> syncFromServer
+Synchronizes the contents from the server directory to the client directory. First, it would send the client index to the server for comparison. If the job is to copy a file/directory, then it would store the corresponding file/directory from the server and append it with the job type to the job queue. Other job types are added to the job queue as is.
 
-#### <i class="icon-check-empty"></i> syncToServer
-Traverses a predetermined path based on input and returns whether it is a directory or a file.
+#### <i class="icon-check"></i> syncToServer
+Synchronizes the contents from the client directory to the server directory. Since the client is "in charge" of handling the synchronizing, so to speak, this function is equipped to handle 3 primary cases:
+
+1. A file/directory exists in server but not in client. In this case, the file/directory in question will be removed from the server directory.
+2. A file/directory exists in client but not in server. In this case, the file/directory in question will be copied to the server directory.
+3. A file/directory exists in both client and server. In this case, the modification time of the file/directory in question will be compared. The older copy of the two will be updated with the most recently modified copy.
 
 #### <i class="icon-check"></i> getNametype
 Returns whether a predetermined path based on input is a directory or a file.
@@ -56,10 +86,10 @@ Sends client index as a dump package to the server.
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
 
 > **WorkerThread**
-> describes the mechanism of writing the changes made after synchronization unto the local disk.
+> describes the mechanism of writing the changes made after synchronization unto the local (client) disk.
 
 #### <i class="icon-check"></i> run
-Iterates over the job queue and applies the changes to the client directory.
+Iterates over the job queue and applies the changes to the client directory one by one.
 
 ----------
 
@@ -112,11 +142,11 @@ server.py
 #### <i class="icon-check"></i> run
 Processes every thread that is received one at a time by determining which action to take based on the request code of the thread. The parsing of the threads continue until the TCP socket connection is closed or when a keyboard interrupt occurs.
 
-#### <i class="icon-check-empty"></i> send
-Sends. Once all the packages have been sent, the server would send 
+#### <i class="icon-check"></i> send
+Sends all packages in the queue to the client through an available socket. The packages are byte-encoded, and the string '?magic?' is a makeshift codeword indicating the end of transmission.
 
-#### <i class="icon-check-empty"></i> receive
-You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
+#### <i class="icon-check"></i> receive
+Receives incoming connection through socket. Received packages go through a 4096-byte buffer and the connection stops when a '?magic?' string is received. This function returns received packages in byte form.
 
 #### <i class="icon-check"></i> getNametype
 Returns whether a predetermined path based on input is a directory or a file.
@@ -133,23 +163,27 @@ Receives connection from client on a non-conditional loop without processing any
 #### <i class="icon-check"></i> updateIndex
 Updates file indices within the server directory in the form of a dictionary, excluding hidden directories and files.
 
-#### <i class="icon-check-empty"></i> syncFromClient
-You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
+#### <i class="icon-check"></i> syncFromClient
+Synchronizes the contents from the client directory to the server directory. First, it would send the server index to the client for comparison. If the job is to copy a file/directory, then it would store the corresponding file/directory from the client and append it with the job type to the job queue. Other job types are added to the job queue as is.
 
-#### <i class="icon-check-empty"></i> syncToClient
-You can delete the current document by clicking <i class="icon-trash"></i> **Delete document** in the document panel.
+#### <i class="icon-check"></i> syncToClient
+Synchronizes the contents from the server directory to the client directory. Since the server is "in charge" of handling the synchronizing, so to speak, this function is equipped to handle 3 primary cases:
+
+1. A file/directory exists in client but not in server. In this case, the file/directory in question will be removed from the client directory.
+2. A file/directory exists in server but not in client. In this case, the file/directory in question will be copied to the client directory.
+3. A file/directory exists in both server and client. In this case, the modification time of the file/directory in question will be compared. The older copy of the two will be updated with the most recently modified copy.
 
 #### <i class="icon-check"></i> getID
 Assigns an ID to a thread within a critical section.
 
 > **WorkerThread**
-> Performs file operations on the local shared folder.
+> describes the mechanism of writing the changes made after synchronization unto the remote (server) disk.
 
-#### <i class="icon-check-empty"></i> run
-Iterates over the jobqueue and performs file operations according to each job queue entry.
+#### <i class="icon-check"></i> run
+Iterates over the job queue and applies the changes to the server directory one by one.
 
 > **ListenThread**
-> Listens for any incoming connections from the client.
+> describes the server mechanism in listening to any incoming connections from the client.
 
 #### <i class="icon-check"></i> run
 Listens for connections; and when there exist incoming connections from the client, it can handle up to 10 connections. In handling these connections, the function has to wait for an available socket before creating a new thread for them.
@@ -157,21 +191,3 @@ Listens for connections; and when there exist incoming connections from the clie
 #### <i class="icon-check"></i> displayThreads
 Prints out the details of all spawned threads, including an information of whether a thread is alive. The list of threads is sorted by their keys.
 
-----------
-
-
-Instructions
--------------
-Make sure that both your device and the server host are connected to the Internet, and that there are no firewall blocking connections.
-
-#### <i class="icon-check-empty"></i> Client-side
-
-1. Run the client-side of SyncOrSwim either via command line or via IDLE.
-2. When prompted, enter the path of the local shared folder, the IP address of the server, and the port.
-3. Follow the on-screen instructions. You will be now using the built-in SyncOrSwim shell.
-
-#### <i class="icon-check-empty"></i> Server-side
-
-1. Run the server-side of SyncOrSwim via IDLE or command line.
-2. When prompted, enter the path of the server shared folder.
-3. Wait for client to initiate connection.
